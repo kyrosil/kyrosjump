@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>KyrosJump! (Debug)</title>
+    <title>KyrosJump! Final</title>
     <style>
-        /* CSS unchanged */
+        /* /* Basic Styling */
         body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f0f0; font-family: sans-serif; overflow: hidden; }
-        canvas { border: 1px solid #ccc; display: block; background-color: #87CEEB; }
+        canvas { border: 1px solid #ccc; display: block; background-color: #87CEEB; /* Sky blue */ }
         #gameContainer { position: relative; width: 360px; height: 540px; margin: auto; overflow: hidden; background-color: #87CEEB; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 1px solid #ccc;}
         #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: rgba(0,0,0,0.7); color: white; text-align: center; visibility: hidden; opacity: 0; transition: opacity 0.3s ease, visibility 0s linear 0.3s; font-size: 1.3em; z-index: 10; padding: 15px; box-sizing: border-box; }
         #gameOverlay.visible { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
         #gameOverlay h2 { margin-bottom: 10px; font-size: 1.5em; }
         #overlayText { margin-bottom: 15px; font-size: 0.9em; }
-        #randomCodeContainer { margin-top: 15px; }
+        /* Styling for Prize Tier Text */
+        #prizeInfo { margin-top: 15px; font-weight: bold; color: #ffd700; font-size: 1.1em; }
+        /* Styling for Claim Code */
+        #randomCodeContainer { margin-top: 10px; }
         #randomCode { padding: 8px 12px; background-color: #fff; color: #e74c3c; font-weight: bold; border-radius: 5px; font-size: 1em; user-select: all; display: inline-block;}
         #restartButton, #startButton { margin-top: 20px; padding: 12px 25px; font-size: 0.9em; cursor: pointer; border: none; color: white; border-radius: 5px; }
         #startButton { background-color: #2ecc71;}
@@ -21,18 +24,31 @@
         .visible-logo-container { text-align: center; margin-bottom: 15px; padding-top: 15px; }
         .visible-logo { max-width: 150px; height: auto; border-radius: 5px; }
         .main-title { color: #2c3e50; font-size: 2em; margin-bottom: 10px; font-weight: 600; text-align: center; }
+
+        /* Mobile fix: Hide static logo on small screens */
+        @media (max-width: 400px) { /* Adjust breakpoint if needed */
+            .visible-logo-container {
+                display: none; /* Hide logo on small screens */
+            }
+            #gameContainer { margin-top: 0px; /* Reset top margin if logo is hidden */ }
+            .main-title { margin-bottom: 5px;}
+            h1.main-title {font-size: 1.6em;} /* Reduce title size on mobile */
+            #gameOverlay {font-size: 1.1em;} /* Adjust overlay font */
+            #gameOverlay h2 { font-size: 1.3em; }
+        } */
     </style>
 </head>
 <body>
      <div style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
         <h1 class="main-title">KyrosJump!</h1>
         <div class="visible-logo-container">
-             <img class="visible-logo" src="slider_picture_1.png" alt="Yunandan Gelsin"> </div>
+             <img class="visible-logo" src="slider_picture_1.png" alt="Yunandan Gelsin">
+         </div>
          <div id="gameContainer">
              <canvas id="gameCanvas" width="360" height="540"></canvas>
-             <div id="gameOverlay">
-                 <h2 id="overlayTitle">KyrosJump!</h2>
+             <div id="gameOverlay"> <h2 id="overlayTitle">KyrosJump!</h2>
                  <p id="overlayText">Loading Assets...</p>
+                 <div id="prizeInfo" style="display: none;"></div>
                  <div id="randomCodeContainer" style="display: none;">
                      Your Code: <span id="randomCode"></span>
                      <p style="font-size: 0.7em; margin-top: 8px;">(Save this code! You might need it!)</p>
@@ -46,151 +62,154 @@
     <img id="imgKyrosil" src="cropped-adsiz_tasarim-removebg-preview-1.png" alt="Kyrosil Logo" style="display:none;">
     <img id="imgEU" src="download.jpg" alt="EU Logo" style="display:none;">
     <img id="imgNATO" src="OIP.jpg" alt="NATO Logo" style="display:none;">
-
-<script>
+    <script>
+    // // Based on user's previously provided "working" code structure, applying final modifications.
     document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOM Loaded. Initializing KyrosJump (v_FinalDebug)...");
+        console.log("DOM Loaded. Initializing KyrosJump (v_UserBase_TieredCodes)...");
 
         // --- Elements ---
         const canvas = document.getElementById('gameCanvas');
         if (!canvas || typeof canvas.getContext !== 'function') { console.error("FATAL: Canvas not found!"); return; }
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('gameOverlay');
-        const startButton = document.getElementById('startButton');
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayText = document.getElementById('overlayText');
+        const prizeInfoSpan = document.getElementById('prizeInfo'); // Will display tier text
         const randomCodeContainer = document.getElementById('randomCodeContainer');
-        const randomCodeSpan = document.getElementById('randomCode');
+        const randomCodeSpan = document.getElementById('randomCode'); // Will display tier code
         const restartButton = document.getElementById('restartButton');
+        const startButton = document.getElementById('startButton');
         const imgKyrosil = document.getElementById('imgKyrosil');
         const imgEU = document.getElementById('imgEU');
         const imgNATO = document.getElementById('imgNATO');
 
-        if (!overlay || !overlayTitle || !overlayText || !randomCodeContainer || !randomCodeSpan || !restartButton || !startButton || !imgKyrosil || !imgEU || !imgNATO) {
+        // Check essential elements
+        if (!overlay || !overlayTitle || !overlayText || !prizeInfoSpan || !randomCodeContainer || !randomCodeSpan || !restartButton || !startButton || !imgKyrosil || !imgEU || !imgNATO) {
              console.error("FATAL: One or more essential HTML elements missing!"); alert("Essential elements missing."); return;
         }
-        console.log("All essential HTML elements found.");
+        console.log("Essential elements found.");
 
-        // --- Image Preloading ---
+        // --- Image Preloading (Kyrosil, EU, NATO - Simpler logic) ---
         const imagesToLoad = [imgKyrosil, imgEU, imgNATO];
         let imagesLoaded = false; let loadedCount = 0; let errorCount = 0;
         const totalImages = imagesToLoad.filter(img => img).length;
-        let imageLoadPromise = null;
+        console.log(`Attempting to load ${totalImages} images...`);
 
-        if (totalImages > 0) { /* ... (Same simplified image loading logic from user's baseline) ... */
-            console.log(`Attempting to load ${totalImages} images (using simpler logic)...`);
-            function checkAllImagesLoaded() { loadedCount++; console.log(`Image check progress: ${loadedCount}/${totalImages}`); if (loadedCount >= totalImages) { console.log(`Asset loading complete. Errors: ${errorCount}`); imagesLoaded = true; if (errorCount > 0) console.warn("Some images failed to load!"); if(gameState === 'loading' || gameState === 'start') { gameState = 'start'; initScreenUpdate(); } } }
+        function checkAllImagesLoaded() { loadedCount++; console.log(`Image check progress: ${loadedCount}/${totalImages}`); if (loadedCount >= totalImages) { console.log(`Asset loading complete. Errors: ${errorCount}`); imagesLoaded = true; if (errorCount > 0) console.warn("Some images failed to load! Using fallbacks."); if(gameState === 'loading' || gameState === 'start') { gameState = 'start'; initScreenUpdate(); } } }
+        if (totalImages > 0) {
             imagesToLoad.forEach(img => { if (!img) { console.error("Null image element"); loadedCount++; return; } if (!img.src || img.src.endsWith('/')) { console.error(`Image ${img.id} has invalid src: ${img.src}`); errorCount++; checkAllImagesLoaded(); return; } console.log(`Checking image: ${img.id} src: ${img.src}`); if (img.complete && img.naturalHeight !== 0) { console.log(`Image ${img.id} already complete.`); setTimeout(checkAllImagesLoaded, 0); } else { img.onload = () => { console.log(`Loaded: ${img.id}`); checkAllImagesLoaded(); }; img.onerror = () => { console.error(`ERROR loading: ${img.id}`); errorCount++; checkAllImagesLoaded(); }; } });
-            if (loadedCount >= totalImages && !imagesLoaded) { console.log("All images were already complete (initial check)."); imagesLoaded = true; if(gameState === 'loading') gameState = 'start'; }
-        } else { console.log("No images to load."); imagesLoaded = true; gameState = 'start'; }
+            if (loadedCount >= totalImages && !imagesLoaded) { console.log("All images were already complete (initial check)."); imagesLoaded = true; if(gameState === 'loading') gameState = 'start';}
+        } else { // No images to load
+             console.log("No images defined for preloading."); imagesLoaded = true; gameState = 'start';
+        }
 
 
-        // --- Game Settings ---
-        const birdProps = { x: 60, y: 150, width: 40, height: 40, gravity: 0.35, lift: -7, velocity: 0, color: 'orange' }; // Added fallback color
+        // --- Game Settings (Bird size 40x40) ---
+        const birdProps = { x: 60, y: 150, width: 40, height: 40, gravity: 0.35, lift: -7, velocity: 0, color: 'orange' };
         const pipeProps = { width: 60, gap: 120, color: '#006400', speed: 2.5, frequency: 85 }; const collectibleProps = { size: 25, score: 5 }; const targetObstacles = 20; const minWinTimeSeconds = 30; const maxCollectiblesToSpawn = 6; const collectibleSpawnObstacles = [2, 5, 8, 11, 14, 17]; let spawnedCollectiblesCount = 0;
-        let pipes = []; let collectibles = []; let obstacleScore = 0; let collectibleScore = 0; let frames = 0; /* gameState set based on loading */ let startTime = null; let animationFrameId = null;
-        const playLimitKey = 'kyrosJumpPlays_vFinalLocal'; const lastPlayDateKey = 'kyrosJumpLastPlayDate_vFinal'; const maxPlaysPerDay = 5;
+        let pipes = []; let collectibles = []; let obstacleScore = 0; let collectibleScore = 0; let frames = 0; /* gameState = 'loading'; */ let startTime = null; let animationFrameId = null;
+        const playLimitKey = 'kyrosJumpPlays_vFinalTierCode'; const lastPlayDateKey = 'kyrosJumpLastPlayDate_vFTC'; const maxPlaysPerDay = 5;
 
-        // --- Generate 100 Prize Codes ---
-        function generateRandomKyrosilCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = 'KYROSIL-'; for (let i = 0; i < 5; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); } return code; }
-        const prizeCodes = new Set(); while (prizeCodes.size < 100) { prizeCodes.add(generateRandomKyrosilCode()); }
-        const prizeCodeArray = Array.from(prizeCodes);
+        // --- Generate Tiered Prize Codes (KYRJP-XXXX format, 50 per tier) ---
+        function generateCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = 'KYRJP-'; for (let i = 0; i < 4; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); } return code; }
+        function generateCodeList(count) { const codes = new Set(); let attempts = 0; const maxAttempts = count * 5; while (codes.size < count && attempts < maxAttempts) { codes.add(generateCode()); attempts++; } return Array.from(codes); }
+        const codesTier150 = generateCodeList(50); // For score 20-29
+        const codesTier300 = generateCodeList(50); // For score 30-39
+        const codesTier500 = generateCodeList(50); // For score 40-49
+        const codesTier1000 = generateCodeList(50); // For score 50+
+        // console.log("Example Tier 150 Codes:", codesTier150.slice(0,2)); // Optional: Check generation
 
         // --- Game Functions ---
-         function checkPlayLimit() { /* Same */ const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); if (lastPlayDate !== today) { plays = 0; localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '0'); } if (plays >= maxPlaysPerDay) { return false; } return true; }
-         function incrementPlayCount() { /* Same */ const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); if (lastPlayDate !== today) { localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '1'); } else { let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); plays++; localStorage.setItem(playLimitKey, plays.toString()); console.log(`Play count: ${plays}/${maxPlaysPerDay}`); } }
-         function resetGame() {
-             console.log(">>> resetGame() function entered. <<<"); // DEBUG
-             if (!imagesLoaded) { console.warn("Reset blocked: Images not ready."); alert("Assets still loading..."); return; }
-             if (!checkPlayLimit()) { showOverlay('Limit Reached!', `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`, false, false); return; }
-             console.log("Resetting game variables...");
-             birdProps.y = 150; birdProps.velocity = 0; pipes = []; collectibles = []; obstacleScore = 0; collectibleScore = 0; frames = 0; startTime = Date.now(); spawnedCollectiblesCount = 0;
-             gameState = 'playing'; // Set state to playing
-             console.log("Gamestate set to 'playing'. Hiding overlay.");
-             hideOverlay();
-             if (animationFrameId) cancelAnimationFrame(animationFrameId);
-             console.log("Starting game loop from reset...");
-             loop();
-         }
+         function checkPlayLimit() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); if (lastPlayDate !== today) { plays = 0; localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '0'); } if (plays >= maxPlaysPerDay) { return false; } return true; }
+         function incrementPlayCount() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); if (lastPlayDate !== today) { localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '1'); } else { let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); plays++; localStorage.setItem(playLimitKey, plays.toString()); console.log(`Play count: ${plays}/${maxPlaysPerDay}`); } }
+         function resetGame() { if (!imagesLoaded) { alert("Assets loading..."); return; } if (!checkPlayLimit()) { showOverlay('Limit Reached!', `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`, false, false); return; } birdProps.y = 150; birdProps.velocity = 0; pipes = []; collectibles = []; obstacleScore = 0; collectibleScore = 0; frames = 0; startTime = Date.now(); spawnedCollectiblesCount = 0; gameState = 'playing'; hideOverlay(); if (animationFrameId) cancelAnimationFrame(animationFrameId); loop(); }
          function birdJump() { if (gameState === 'playing') birdProps.velocity = birdProps.lift; }
-         function updatePipesAndCollectibles() { /* Same */ if (frames % pipeProps.frequency === 0) { let pipeY = Math.floor(Math.random() * (canvas.height - pipeProps.gap - 150)) + 75; pipes.push({ x: canvas.width, y: 0, height: pipeY, passed: false }); pipes.push({ x: canvas.width, y: pipeY + pipeProps.gap, height: canvas.height - pipeY - pipeProps.gap, passed: false }); if (collectibleSpawnObstacles.includes(obstacleScore) && spawnedCollectiblesCount < maxCollectiblesToSpawn) { const collectibleType = Math.random() < 0.5 ? 'EU' : 'NATO'; const collectibleImg = collectibleType === 'EU' ? imgEU : imgNATO; const collectibleY = pipeY + (pipeProps.gap / 2) - (collectibleProps.size / 2) + (Math.random() * 40 - 20); const collectibleX = canvas.width + pipeProps.width; if (collectibleImg && collectibleImg.complete && collectibleImg.naturalHeight !== 0) { collectibles.push({ x: collectibleX, y: collectibleY, type: collectibleType, img: collectibleImg, collected: false, offscreen: false }); spawnedCollectiblesCount++; } } } for (let i = pipes.length - 1; i >= 0; i--) { pipes[i].x -= pipeProps.speed; if (pipes[i].x + pipeProps.width < 0) pipes.splice(i, 1); } for (let i = collectibles.length - 1; i >= 0; i--) { collectibles[i].x -= pipeProps.speed; if (collectibles[i].x + collectibleProps.size < 0) collectibles[i].offscreen = true; } }
-         function updateBird() { /* Same */ birdProps.velocity += birdProps.gravity; birdProps.y += birdProps.velocity; if (birdProps.y + birdProps.height > canvas.height) { birdProps.y = canvas.height - birdProps.height; birdProps.velocity = 0; setGameOver(); } if (birdProps.y < 0) { birdProps.y = 0; birdProps.velocity = 0; } }
-         function checkCollisions() { /* Same */ const bird = birdProps; for (const pipe of pipes) { if (bird.x < pipe.x + pipeProps.width && bird.x + bird.width > pipe.x && bird.y < pipe.y + pipe.height && bird.y + bird.height > pipe.y) { setGameOver(); return; } } for (const item of collectibles) { if (!item.collected && !item.offscreen && bird.x < item.x + collectibleProps.size && bird.x + bird.width > item.x && bird.y < item.y + collectibleProps.size && bird.y + bird.height > item.y) { item.collected = true; collectibleScore += collectibleProps.score; } } for (let i = 0; i < pipes.length; i += 2) { const topPipe = pipes[i]; if (!topPipe.passed && topPipe.x + pipeProps.width < bird.x) { topPipe.passed = true; if(pipes[i+1]) pipes[i+1].passed = true; obstacleScore++; if (obstacleScore >= targetObstacles) { setWin(); return; } } } }
-         function drawBird() { /* Same fallback */ if (imgKyrosil && imgKyrosil.complete && imgKyrosil.naturalHeight !== 0 && imgKyrosil.src) { let angle = birdProps.velocity / 10; angle = Math.max(-Math.PI / 6, Math.min(Math.PI / 4, angle)); ctx.save(); ctx.translate(birdProps.x + birdProps.width / 2, birdProps.y + birdProps.height / 2); ctx.rotate(angle); try { ctx.drawImage(imgKyrosil, -birdProps.width / 2, -birdProps.height / 2, birdProps.width, birdProps.height); } catch(e){ console.error("Draw Kyrosil Error:", e); ctx.fillStyle=birdProps.color; ctx.fillRect(-birdProps.width / 2, -birdProps.height / 2, birdProps.width, birdProps.height);} ctx.restore(); } else { ctx.fillStyle = birdProps.color; ctx.fillRect(birdProps.x, birdProps.y, birdProps.width, birdProps.height); if (frames % 120 === 0) { console.warn("Drawing fallback bird."); } } }
-         function drawPipes() { /* Same */ ctx.fillStyle = pipeProps.color; pipes.forEach(pipe => { ctx.fillRect(pipe.x, pipe.y, pipeProps.width, pipe.height); }); }
-         function drawCollectibles() { /* Same fallback */ collectibles.forEach(item => { if (!item.collected && !item.offscreen && item.img && item.img.complete && item.img.naturalHeight !==0) { try{ ctx.drawImage(item.img, item.x, item.y, collectibleProps.size, collectibleProps.size); } catch(e) { console.error(`Draw Collectible Error ${item.type}:`, e); ctx.fillStyle = (item.type === 'EU' ? '#003399' : '#4A4A4A'); ctx.fillRect(item.x, item.y, collectibleProps.size, collectibleProps.size);}} }); }
-         function drawScore() { /* Same */ ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth= 0.5; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; const obsText = `Obstacles: ${obstacleScore}/${targetObstacles}`; const bonusText = `Bonus: ${collectibleScore}`; ctx.strokeText(obsText, 10, 10); ctx.fillText(obsText, 10, 10); ctx.strokeText(bonusText, 10, 35); ctx.fillText(bonusText, 10, 35); }
-         function checkWinConditions() { /* Same */ const endTime = Date.now(); const elapsedTimeSeconds = (endTime - startTime) / 1000; if (!startTime || elapsedTimeSeconds < minWinTimeSeconds) { console.warn(`Anti-Cheat: Time (${elapsedTimeSeconds.toFixed(1)}s) < Min (${minWinTimeSeconds}s).`); return false; } return true; }
+         function updatePipesAndCollectibles() { if (frames % pipeProps.frequency === 0) { let pipeY = Math.floor(Math.random() * (canvas.height - pipeProps.gap - 150)) + 75; pipes.push({ x: canvas.width, y: 0, height: pipeY, passed: false }); pipes.push({ x: canvas.width, y: pipeY + pipeProps.gap, height: canvas.height - pipeY - pipeProps.gap, passed: false }); if (collectibleSpawnObstacles.includes(obstacleScore) && spawnedCollectiblesCount < maxCollectiblesToSpawn) { const collectibleType = Math.random() < 0.5 ? 'EU' : 'NATO'; const collectibleImg = collectibleType === 'EU' ? imgEU : imgNATO; const collectibleY = pipeY + (pipeProps.gap / 2) - (collectibleProps.size / 2) + (Math.random() * 40 - 20); const collectibleX = canvas.width + pipeProps.width; if (collectibleImg && collectibleImg.complete && collectibleImg.naturalHeight !== 0) { collectibles.push({ x: collectibleX, y: collectibleY, type: collectibleType, img: collectibleImg, collected: false, offscreen: false }); spawnedCollectiblesCount++; } } } for (let i = pipes.length - 1; i >= 0; i--) { pipes[i].x -= pipeProps.speed; if (pipes[i].x + pipeProps.width < 0) pipes.splice(i, 1); } for (let i = collectibles.length - 1; i >= 0; i--) { collectibles[i].x -= pipeProps.speed; if (collectibles[i].x + collectibleProps.size < 0) collectibles[i].offscreen = true; } }
+         function updateBird() { birdProps.velocity += birdProps.gravity; birdProps.y += birdProps.velocity; if (birdProps.y + birdProps.height > canvas.height) { birdProps.y = canvas.height - birdProps.height; birdProps.velocity = 0; setGameOver(); } if (birdProps.y < 0) { birdProps.y = 0; birdProps.velocity = 0; } }
+         function checkCollisions() { const bird = birdProps; for (const pipe of pipes) { if (bird.x < pipe.x + pipeProps.width && bird.x + bird.width > pipe.x && bird.y < pipe.y + pipe.height && bird.y + bird.height > pipe.y) { setGameOver(); return; } } for (const item of collectibles) { if (!item.collected && !item.offscreen && bird.x < item.x + collectibleProps.size && bird.x + bird.width > item.x && bird.y < item.y + collectibleProps.size && bird.y + bird.height > item.y) { item.collected = true; collectibleScore += collectibleProps.score; } } for (let i = 0; i < pipes.length; i += 2) { const topPipe = pipes[i]; if (!topPipe.passed && topPipe.x + pipeProps.width < bird.x) { topPipe.passed = true; if(pipes[i+1]) pipes[i+1].passed = true; obstacleScore++; if (obstacleScore >= targetObstacles) { setWin(); return; } } } }
+         function drawBird() { if (imgKyrosil && imgKyrosil.complete && imgKyrosil.naturalHeight !== 0 && imgKyrosil.src) { let angle = birdProps.velocity / 10; angle = Math.max(-Math.PI / 6, Math.min(Math.PI / 4, angle)); ctx.save(); ctx.translate(birdProps.x + birdProps.width / 2, birdProps.y + birdProps.height / 2); ctx.rotate(angle); try { ctx.drawImage(imgKyrosil, -birdProps.width / 2, -birdProps.height / 2, birdProps.width, birdProps.height); } catch(e){ ctx.fillStyle=birdProps.color; ctx.fillRect(-birdProps.width / 2, -birdProps.height / 2, birdProps.width, birdProps.height);} ctx.restore(); } else { ctx.fillStyle = birdProps.color; ctx.fillRect(birdProps.x, birdProps.y, birdProps.width, birdProps.height); if (frames % 120 === 0) { console.warn("Drawing fallback bird."); } } }
+         function drawPipes() { ctx.fillStyle = pipeProps.color; pipes.forEach(pipe => { ctx.fillRect(pipe.x, pipe.y, pipeProps.width, pipe.height); }); }
+         function drawCollectibles() { collectibles.forEach(item => { if (!item.collected && !item.offscreen && item.img && item.img.complete && item.img.naturalHeight !==0) { try{ ctx.drawImage(item.img, item.x, item.y, collectibleProps.size, collectibleProps.size); } catch(e) { ctx.fillStyle = (item.type === 'EU' ? '#003399' : '#4A4A4A'); ctx.fillRect(item.x, item.y, collectibleProps.size, collectibleProps.size);}} }); }
+         function drawScore() { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth= 0.5; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; const obsText = `Obstacles: ${obstacleScore}/${targetObstacles}`; const bonusText = `Bonus: ${collectibleScore}`; ctx.strokeText(obsText, 10, 10); ctx.fillText(obsText, 10, 10); ctx.strokeText(bonusText, 10, 35); ctx.fillText(bonusText, 10, 35); }
+         function checkWinConditions() { const endTime = Date.now(); const elapsedTimeSeconds = (endTime - startTime) / 1000; if (!startTime || elapsedTimeSeconds < minWinTimeSeconds) { console.warn(`Anti-Cheat: Time (${elapsedTimeSeconds.toFixed(1)}s) < Min (${minWinTimeSeconds}s).`); return false; } return true; }
 
-         // Simplified showOverlay - NO prizeTierText, ONLY randomCode
-         function showOverlay(title, text, showStart, showRestart, randomCode = '') {
-             if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !randomCodeContainer || !randomCodeSpan) { console.error("Overlay elements missing!"); return; }
-             console.log(`Show Overlay: Title='${title}', Text='${text}', StartBtn=${showStart}, RestartBtn=${showRestart}, Code='${randomCode}'`); // DEBUG
+         // Updated showOverlay to accept prizeTierText and the tierCode
+         function showOverlay(title, text, showStart, showRestart, prizeTierText = '', tierCode = '') {
+             if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !prizeInfoSpan || !randomCodeContainer || !randomCodeSpan) { return; }
              overlayTitle.textContent = title;
              overlayText.textContent = text;
              startButton.style.display = showStart ? 'inline-block' : 'none';
              restartButton.style.display = showRestart ? 'inline-block' : 'none';
-             // prizeInfoSpan removed
-             if (randomCode) { randomCodeSpan.textContent = randomCode; randomCodeContainer.style.display = 'block'; }
+             // Show prize tier text if provided
+             if (prizeTierText) { prizeInfoSpan.textContent = prizeTierText; prizeInfoSpan.style.display = 'block'; }
+             else { prizeInfoSpan.style.display = 'none'; }
+             // Show claim code if provided
+             if (tierCode) { randomCodeSpan.textContent = tierCode; randomCodeContainer.style.display = 'block'; }
              else { randomCodeContainer.style.display = 'none'; }
              overlay.classList.add('visible');
          }
-         function hideOverlay() { console.log("Hiding overlay."); if(overlay) overlay.classList.remove('visible'); } // DEBUG
-         function setGameOver() { /* Same */ if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over"); gameState = 'gameover'; playSound(loseSound); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;} incrementPlayCount(); showOverlay('Game Over!', `Obstacles: ${obstacleScore} | Bonus: ${collectibleScore}`, false, true); }
+         function hideOverlay() { if(overlay) overlay.classList.remove('visible'); }
+         function setGameOver() { if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over"); gameState = 'gameover'; playSound(loseSound); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;} incrementPlayCount(); showOverlay('Game Over!', `Obstacles: ${obstacleScore} | Bonus: ${collectibleScore}`, false, true); }
 
-         // Simplified setWin - NO Tiers, NO Formspree, ONLY Random Code
+         // Updated setWin - RE-ADDED Tiers for code selection, REMOVED Formspree
          function setWin() {
-             if (gameState === 'win' || gameState === 'gameover') return;
-             console.log("Win condition met!");
-             if (checkWinConditions()) {
-                 gameState = 'win';
-                 playSound(winSound);
-                 if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;}
-                 incrementPlayCount();
-                 const totalScore = targetObstacles + collectibleScore;
-                 const randomCode = prizeCodeArray[Math.floor(Math.random() * prizeCodeArray.length)];
-                 console.log(`Win! Score: ${totalScore}, Code: ${randomCode}`);
-                 showOverlay('🎉 Congratulations! 🎉', `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`, false, true, randomCode);
-                 // Formspree call REMOVED
-             } else {
-                 console.log("Anti-cheat check failed.");
-                 setGameOver();
-                 if(overlayText) overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Anti-cheat check failed.`;
-             }
+              if (gameState === 'win' || gameState === 'gameover') return;
+              console.log("Win condition met!");
+              if (checkWinConditions()) {
+                  gameState = 'win';
+                  playSound(winSound);
+                  if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;}
+                  incrementPlayCount();
+
+                  const totalScore = targetObstacles + collectibleScore;
+                  let prizeTierText = ''; // Text describing the tier
+                  let selectedCodeList = null; // Which list to pick code from
+
+                  // Determine prize tier and select code list
+                  if (totalScore >= 50)      { prizeTierText = "You won a 1000 TL Tier Code!"; selectedCodeList = codesTier1000; }
+                  else if (totalScore >= 40) { prizeTierText = "You won a 500 TL Tier Code!"; selectedCodeList = codesTier500; }
+                  else if (totalScore >= 30) { prizeTierText = "You won a 300 TL Tier Code!"; selectedCodeList = codesTier300; }
+                  else                       { prizeTierText = "You won a 150 TL Tier Code!"; selectedCodeList = codesTier150; } // Base win
+
+                  // Select ONE random code from the determined list
+                  const finalCode = selectedCodeList && selectedCodeList.length > 0
+                                    ? selectedCodeList[Math.floor(Math.random() * selectedCodeList.length)]
+                                    : 'KYRJP-ERR'; // Fallback code if list is empty
+
+                  console.log(`Win! Score: ${totalScore}, Tier Text: ${prizeTierText}, Displayed Code: ${finalCode}`);
+
+                  // Show overlay with score, tier text, AND the selected random code for that tier
+                  showOverlay('🎉 Congratulations! 🎉',
+                              `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`,
+                              false, // showStart
+                              true,  // showRestart
+                              prizeTierText, // Pass prize tier text
+                              finalCode      // Pass the selected code
+                  );
+
+                  // Formspree call REMOVED
+
+              } else {
+                  console.log("Anti-cheat check failed.");
+                  setGameOver();
+                  if(overlayText) overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Anti-cheat check failed.`;
+              }
          }
 
         // Game Loop
-        function loop(timestamp) { if (gameState !== 'playing') { return; } ctx.clearRect(0, 0, canvas.width, canvas.height); /* drawBackground removed */ updatePipesAndCollectibles(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
+        function loop(timestamp) { if (gameState !== 'playing') { return; } ctx.clearRect(0, 0, canvas.width, canvas.height); updatePipesAndCollectibles(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
 
-        // --- Init and Event Listeners (Includes DEBUG logs) ---
+        // --- Init and Event Listeners (Fixed) ---
         const spacebarHandler = (e) => { if (!imagesLoaded) return; if (e.code === 'Space') { e.preventDefault(); if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } };
         function initScreenUpdate() { if (!overlay || !startButton || !overlayText) {console.error("Cannot update screen: elements missing!"); return;} const canPlay = checkPlayLimit(); const plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); const playsRemaining = maxPlaysPerDay - plays; let startText = ''; if (imagesLoaded) { startText = `Plays remaining today: ${canPlay ? playsRemaining : 0}`; if (!canPlay) { startText = `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`; } } else { startText = 'Loading Assets... Please Wait...'; } console.log("Updating overlay text:", startText); showOverlay('KyrosJump!', startText, (canPlay && imagesLoaded), false); if(startButton) { startButton.disabled = !imagesLoaded || !canPlay; if (!canPlay && imagesLoaded) { startButton.style.display = 'none'; } else { startButton.style.display = 'inline-block'; } } }
-        function init() { console.log(">>> init() function entered."); gameState = 'start'; if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } hideOverlay(); initScreenUpdate();
-            const clickOrTapHandler = (e) => { if (imagesLoaded) { if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } if (e.type === 'touchstart') e.preventDefault(); };
-            canvas.removeEventListener('click', clickOrTapHandler); canvas.removeEventListener('touchstart', clickOrTapHandler);
-            canvas.addEventListener('click', clickOrTapHandler); canvas.addEventListener('touchstart', clickOrTapHandler);
-
-            console.log("Setting up Start Button listener inside init...");
-             if (!startButton) { console.error("CRITICAL: Start Button is NULL in init!"); return; }
-             startButton.onclick = () => {
-                 console.log("--- Start Button Clicked! ---"); // CLICK LOG
-                 const currentState = gameState; const currentLoaded = imagesLoaded; const currentCanPlay = checkPlayLimit();
-                 console.log(`Checking conditions: gameState='${currentState}', imagesLoaded=${currentLoaded}, canPlay=${currentCanPlay}`); // STATE LOG
-                 if (currentState === 'start' && currentLoaded && currentCanPlay) {
-                     console.log("Conditions MET! Calling resetGame()..."); // SUCCESS LOG
-                     resetGame();
-                 } else {
-                     console.error(`Start button ignored! Reason(s):`); // FAILURE LOG
-                     if (currentState !== 'start') { console.error(` - gameState is NOT 'start' (it is '${currentState}')`); alert(`Cannot start game. Current state: ${currentState}`); }
-                     if (!currentLoaded) { console.error(` - imagesLoaded is FALSE`); alert("Assets still loading, please wait or check console for errors."); }
-                     if (!currentCanPlay) { console.error(` - checkPlayLimit() returned FALSE`); alert(`Daily play limit (${maxPlaysPerDay}) reached! Try again tomorrow.`); }
-                 }
-             };
+        function init() { console.log("Initializing start screen..."); gameState = 'start'; if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } hideOverlay(); initScreenUpdate();
+             const clickOrTapHandler = (e) => { if (imagesLoaded) { if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } if (e.type === 'touchstart') e.preventDefault(); };
+             canvas.removeEventListener('click', clickOrTapHandler); canvas.removeEventListener('touchstart', clickOrTapHandler);
+             canvas.addEventListener('click', clickOrTapHandler); canvas.addEventListener('touchstart', clickOrTapHandler);
+             // Start Button Listener with Debug Logs
+             startButton.onclick = () => { console.log("--- Start Button Clicked! ---"); const currentState = gameState; const currentLoaded = imagesLoaded; const currentCanPlay = checkPlayLimit(); console.log(`Checking conditions: gameState='${currentState}', imagesLoaded=${currentLoaded}, canPlay=${currentCanPlay}`); if (currentState === 'start' && currentLoaded && currentCanPlay) { console.log("Conditions MET! Calling resetGame()..."); resetGame(); } else { console.error(`Start button ignored! Reason(s):`); if (currentState !== 'start') { console.error(` - gameState is NOT 'start' (it is '${currentState}')`); alert(`Cannot start game. Current state: ${currentState}`); } if (!currentLoaded) { console.error(` - imagesLoaded is FALSE`); alert("Assets loading..."); } if (!currentCanPlay) { console.error(` - checkPlayLimit() returned FALSE`); alert(`Daily limit reached!`); } } };
              console.log("Start Button listener attached.");
-
-            restartButton.onclick = () => { console.log("Restart clicked."); if ((gameState === 'gameover' || gameState === 'win') && imagesLoaded) { init(); } };
-            window.removeEventListener('keydown', spacebarHandler); window.addEventListener('keydown', spacebarHandler);
-         }
+             restartButton.onclick = () => { console.log("Restart clicked."); if ((gameState === 'gameover' || gameState === 'win') && imagesLoaded) { init(); } }; window.removeEventListener('keydown', spacebarHandler); window.addEventListener('keydown', spacebarHandler); }
 
         // --- Sounds (Placeholder) ---
         const loseSound = null; const winSound = null; function playSound(soundElement) { if (soundElement?.play) { soundElement.currentTime = 0; soundElement.play().catch(e => console.warn("Sound play failed:", e)); } }
@@ -199,11 +218,17 @@
         // --- Initial Start ---
         console.log("Setting initial game state to 'loading'.");
         gameState = 'loading';
-        // Run init only AFTER image loading attempts finish (via Promise or timeout)
-        if (imageLoadPromise) { imageLoadPromise.finally(() => { console.log("Image promises settled. Running init() via finally."); if(gameState === 'loading') gameState = 'start'; init(); }); }
-        else { console.log("No image promise found, running init() immediately."); imagesLoaded = true; gameState = 'start'; init(); }
+        initScreenUpdate(); // Show initial loading message
+        // Run init only AFTER image loading attempt finishes
+        if (totalImages === 0) { // Handle case with no images
+             console.log("No images to load, running init() immediately."); imagesLoaded = true; gameState = 'start'; init();
+        } // Otherwise wait for checkAllImagesLoaded to finish and call initScreenUpdate
 
     }); // END of DOMContentLoaded listener
+</script>
+
+</body>
+</html> 
 </script>
 
 </body>
