@@ -5,32 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>KyrosJump!</title>
     <style>
-        /* Basic Styling */
+        /* Basic Styling - From User's Working Code */
         body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f0f0; font-family: sans-serif; overflow: hidden; }
-        canvas { border: 1px solid #ccc; display: block; background-color: #87CEEB; /* Sky blue */ }
-        #gameContainer { position: relative; width: 360px; height: 540px; margin: auto; overflow: hidden; background-color: #87CEEB; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 1px solid #ccc;}
+        canvas { border: 1px solid #ccc; display: block; background-color: #87CEEB; }
+        #gameContainer { position: relative; width: 360px; height: 540px; margin: auto; overflow: hidden; background-color: #87CEEB; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 1px solid #ccc;} /* Added Container */
         #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: rgba(0,0,0,0.7); color: white; text-align: center; visibility: hidden; opacity: 0; transition: opacity 0.3s ease, visibility 0s linear 0.3s; font-size: 1.3em; z-index: 10; padding: 15px; box-sizing: border-box; }
         #gameOverlay.visible { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
         #gameOverlay h2 { margin-bottom: 10px; font-size: 1.5em; }
         #overlayText { margin-bottom: 15px; font-size: 0.9em; }
-        /* prizeInfo div is removed */
-        #randomCodeContainer { margin-top: 15px; /* Adjusted */ }
+        /* prizeInfo div removed */
+        #randomCodeContainer { margin-top: 15px; }
         #randomCode { padding: 8px 12px; background-color: #fff; color: #e74c3c; font-weight: bold; border-radius: 5px; font-size: 1em; user-select: all; display: inline-block;}
         #restartButton, #startButton { margin-top: 20px; padding: 12px 25px; font-size: 0.9em; cursor: pointer; border: none; color: white; border-radius: 5px; }
         #startButton { background-color: #2ecc71;}
         #restartButton { background-color: #3498db;}
-        .visible-logo-container { text-align: center; margin-bottom: 15px; padding-top: 15px; }
-        .visible-logo { max-width: 150px; height: auto; border-radius: 5px; }
-        .main-title { color: #2c3e50; font-size: 2em; margin-bottom: 10px; font-weight: 600; text-align: center; }
+        .main-title { color: #2c3e50; font-size: 2em; margin-bottom: 20px; font-weight: 600; text-align: center; } /* Adjusted margin */
+        /* Removed visible logo styles */
     </style>
 </head>
 <body>
      <div style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
         <h1 class="main-title">KyrosJump!</h1>
-        <div class="visible-logo-container">
-             <img class="visible-logo" src="slider_picture_1.png" alt="Yunandan Gelsin">
-         </div>
-         <div id="gameContainer">
+        <div id="gameContainer">
              <canvas id="gameCanvas" width="360" height="540"></canvas>
              <div id="gameOverlay">
                  <h2 id="overlayTitle">KyrosJump!</h2>
@@ -49,9 +45,9 @@
     <img id="imgEU" src="download.jpg" alt="EU Logo" style="display:none;">
     <img id="imgNATO" src="OIP.jpg" alt="NATO Logo" style="display:none;">
     <script>
-    // Using the structure user provided ("working version"), applying final modifications.
+    // Based on user's previously provided "working" code structure, with requested final mods.
     document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOM Loaded. Initializing KyrosJump (v_UserBase_LocalAssets_NoFormspree)...");
+        console.log("DOM Loaded. Initializing KyrosJump (v_UserBase_Final)...");
 
         // --- Elements ---
         const canvas = document.getElementById('gameCanvas');
@@ -60,7 +56,7 @@
         const overlay = document.getElementById('gameOverlay');
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayText = document.getElementById('overlayText');
-        // prizeInfoSpan removed reference
+        // prizeInfoSpan removed
         const randomCodeContainer = document.getElementById('randomCodeContainer');
         const randomCodeSpan = document.getElementById('randomCode');
         const restartButton = document.getElementById('restartButton');
@@ -69,33 +65,35 @@
         const imgEU = document.getElementById('imgEU');
         const imgNATO = document.getElementById('imgNATO');
 
+        // Basic Element Checks
         if (!overlay || !overlayTitle || !overlayText || !randomCodeContainer || !randomCodeSpan || !restartButton || !startButton || !imgKyrosil || !imgEU || !imgNATO) {
              console.error("FATAL: One or more essential elements missing!"); alert("Essential elements missing."); return;
         }
         console.log("Essential elements found.");
 
-        // --- Image Preloading (Kyrosil, EU, NATO - Using simpler logic from user's 'working' code) ---
-        const imagesToLoad = [imgKyrosil, imgEU, imgNATO]; // Only these 3 needed for canvas
-        let imagesLoaded = false; let loadedCount = 0; let errorCount = 0; // Added errorCount
-        const totalImages = imagesToLoad.filter(img => img !== null).length;
+        // --- Image Preloading (Kyrosil, EU, NATO - Using user's simpler logic base) ---
+        const imagesToLoad = [imgKyrosil, imgEU, imgNATO]; // Only 3 images
+        let imagesLoaded = false; let loadedCount = 0; let errorCount = 0;
+        const totalImages = imagesToLoad.filter(img => img !== null).length; // Should be 3
         console.log(`Attempting to load ${totalImages} images...`);
 
+        // Simpler loading check from user's provided code
         function checkAllImagesLoaded() {
             loadedCount++;
             console.log(`Image check progress: ${loadedCount}/${totalImages}`);
             if (loadedCount >= totalImages) {
                 console.log(`Asset loading complete. Errors: ${errorCount}`);
-                imagesLoaded = true; // Set loaded regardless of errors
-                 if (errorCount > 0) console.warn("Some images failed to load! Using fallbacks.");
-                if(gameState === 'loading' || gameState === 'start') { // Update screen if needed
+                imagesLoaded = true;
+                if (errorCount > 0) console.warn("Some images failed to load! Using fallbacks.");
+                 // Update screen ONLY if it's currently in the start/loading state
+                if(gameState === 'loading' || gameState === 'start') {
                     gameState = 'start'; // Ensure state is start
                     initScreenUpdate();
                 }
             }
         }
-
         imagesToLoad.forEach(img => {
-             if (!img) { console.error("Null image element"); loadedCount++; return; }
+             if (!img) { console.error("Null image element found!"); loadedCount++; return; }
              // Check src before setting listeners
              if (!img.src || img.src.endsWith('/')) {
                   console.error(`Image ${img.id} has invalid src: ${img.src}`);
@@ -105,20 +103,20 @@
              }
              console.log(`Checking image: ${img.id} src: ${img.src}`);
              if (img.complete && img.naturalHeight !== 0) {
-                 console.log(`Image ${img.id} already complete.`);
-                 // Use setTimeout to ensure check runs after loop
-                 setTimeout(checkAllImagesLoaded, 0);
+                  console.log(`Image ${img.id} already complete.`);
+                  // Use setTimeout to avoid potential race condition
+                  setTimeout(checkAllImagesLoaded, 0);
              } else {
                   img.onload = () => { console.log(`Loaded: ${img.id}`); checkAllImagesLoaded(); };
                   img.onerror = () => { console.error(`ERROR loading: ${img.id}`); errorCount++; checkAllImagesLoaded(); };
              }
         });
-        // Initial check in case all were cached
-        if (loadedCount >= totalImages && !imagesLoaded) {
-             console.log("All images were already complete.");
-             imagesLoaded = true;
-             if(gameState === 'loading') gameState = 'start';
-        }
+         // Initial check in case all were cached
+         if (loadedCount >= totalImages && !imagesLoaded) {
+              console.log("All images were already complete (initial check).");
+              imagesLoaded = true;
+              if(gameState === 'loading') gameState = 'start';
+         }
 
 
         // --- Game Settings (Bird size 40x40) ---
@@ -146,46 +144,52 @@
          function drawScore() { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth= 0.5; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; const obsText = `Obstacles: ${obstacleScore}/${targetObstacles}`; const bonusText = `Bonus: ${collectibleScore}`; ctx.strokeText(obsText, 10, 10); ctx.fillText(obsText, 10, 10); ctx.strokeText(bonusText, 10, 35); ctx.fillText(bonusText, 10, 35); }
          function checkWinConditions() { const endTime = Date.now(); const elapsedTimeSeconds = (endTime - startTime) / 1000; if (!startTime || elapsedTimeSeconds < minWinTimeSeconds) { console.warn(`Anti-Cheat: Time (${elapsedTimeSeconds.toFixed(1)}s) < Min (${minWinTimeSeconds}s).`); return false; } return true; }
 
-         // Simplified showOverlay - NO prizeTierText
+         // Updated showOverlay - NO prizeTierText, uses randomCode
          function showOverlay(title, text, showStart, showRestart, randomCode = '') {
-            if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !randomCodeContainer || !randomCodeSpan) { return; }
-            overlayTitle.textContent = title;
-            overlayText.textContent = text;
-            startButton.style.display = showStart ? 'inline-block' : 'none';
-            restartButton.style.display = showRestart ? 'inline-block' : 'none';
-            // prizeInfoSpan removed
-            if (randomCode) { randomCodeSpan.textContent = randomCode; randomCodeContainer.style.display = 'block'; }
-            else { randomCodeContainer.style.display = 'none'; }
-            overlay.classList.add('visible');
-        }
+             if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !randomCodeContainer || !randomCodeSpan) { return; }
+             overlayTitle.textContent = title;
+             overlayText.textContent = text;
+             startButton.style.display = showStart ? 'inline-block' : 'none';
+             restartButton.style.display = showRestart ? 'inline-block' : 'none';
+             if (prizeTextSpan) prizeTextSpan.style.display = 'none'; // Hide removed element
+             if (randomCode) { randomCodeSpan.textContent = randomCode; randomCodeContainer.style.display = 'block'; }
+             else { randomCodeContainer.style.display = 'none'; }
+             overlay.classList.add('visible');
+         }
          function hideOverlay() { if(overlay) overlay.classList.remove('visible'); }
          function setGameOver() { if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over"); gameState = 'gameover'; playSound(loseSound); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;} incrementPlayCount(); showOverlay('Game Over!', `Obstacles: ${obstacleScore} | Bonus: ${collectibleScore}`, false, true); }
 
-        // Simplified setWin - NO Tiers, NO Formspree, ONLY Random Code
-        function setWin() {
-             if (gameState === 'win' || gameState === 'gameover') return;
-             console.log("Win condition met!");
-             if (checkWinConditions()) {
-                 gameState = 'win';
-                 playSound(winSound);
-                 if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;}
-                 incrementPlayCount();
-                 const totalScore = targetObstacles + collectibleScore;
-                 const randomCode = prizeCodeArray[Math.floor(Math.random() * prizeCodeArray.length)];
-                 console.log(`Win! Score: ${totalScore}, Code: ${randomCode}`);
-                 showOverlay('🎉 Congratulations! 🎉', `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`, false, true, randomCode);
-                 // Formspree call REMOVED
-             } else {
-                 console.log("Anti-cheat check failed.");
-                 setGameOver();
-                 if(overlayText) overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Anti-cheat check failed.`;
-             }
-        }
+         // Updated setWin - NO Tiers, NO Formspree, ONLY Random Code
+         function setWin() {
+              if (gameState === 'win' || gameState === 'gameover') return;
+              console.log("Win condition met!");
+              if (checkWinConditions()) {
+                  gameState = 'win';
+                  playSound(winSound);
+                  if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;}
+                  incrementPlayCount();
+
+                  const totalScore = targetObstacles + collectibleScore;
+                  // Select ONE random code from the array
+                  const randomCode = prizeCodeArray[Math.floor(Math.random() * prizeCodeArray.length)];
+                  console.log(`Win! Score: ${totalScore}, Displayed Code: ${randomCode}`);
+
+                  // Show overlay with score and the random code
+                  showOverlay('🎉 Congratulations! 🎉', `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`, false, true, '' /* No Prize Text */, randomCode);
+
+                  // Formspree call REMOVED
+
+              } else {
+                  console.log("Anti-cheat check failed.");
+                  setGameOver();
+                  if(overlayText) overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Anti-cheat check failed.`;
+              }
+         }
 
         // Game Loop (No drawBackground)
-        function loop(timestamp) { if (gameState !== 'playing') { return; } ctx.clearRect(0, 0, canvas.width, canvas.height); updatePipesAndCollectibles(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
+        function loop(timestamp) { if (gameState !== 'playing') { return; } ctx.clearRect(0, 0, canvas.width, canvas.height); /* drawBackground removed */ updatePipesAndCollectibles(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
 
-        // --- Init and Event Listeners (Fixed) ---
+        // --- Init and Event Listeners ---
         const spacebarHandler = (e) => { if (!imagesLoaded) return; if (e.code === 'Space') { e.preventDefault(); if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } };
         function initScreenUpdate() { if (!overlay || !startButton || !overlayText) {console.error("Cannot update screen: elements missing!"); return;} const canPlay = checkPlayLimit(); const plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); const playsRemaining = maxPlaysPerDay - plays; let startText = ''; if (imagesLoaded) { startText = `Plays remaining today: ${canPlay ? playsRemaining : 0}`; if (!canPlay) { startText = `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`; } } else { startText = 'Loading Assets... Please Wait...'; } console.log("Updating overlay text:", startText); showOverlay('KyrosJump!', startText, (canPlay && imagesLoaded), false); if(startButton) { startButton.disabled = !imagesLoaded || !canPlay; if (!canPlay && imagesLoaded) { startButton.style.display = 'none'; } else { startButton.style.display = 'inline-block'; } } }
         function init() { console.log("Initializing start screen..."); gameState = 'start'; if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } hideOverlay(); initScreenUpdate(); const clickOrTapHandler = (e) => { if (imagesLoaded) { if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } if (e.type === 'touchstart') e.preventDefault(); }; canvas.removeEventListener('click', clickOrTapHandler); canvas.removeEventListener('touchstart', clickOrTapHandler); canvas.addEventListener('click', clickOrTapHandler); canvas.addEventListener('touchstart', clickOrTapHandler); startButton.onclick = () => { if (gameState === 'start' && imagesLoaded && checkPlayLimit()) { resetGame(); } else { console.warn(`Start button ignored. State: ${gameState}, Loaded: ${imagesLoaded}, CanPlay: ${checkPlayLimit()}`); if (!imagesLoaded) alert("Assets loading..."); else if (!checkPlayLimit()) alert(`Daily limit reached!`); } }; restartButton.onclick = () => { console.log("Restart clicked."); if ((gameState === 'gameover' || gameState === 'win') && imagesLoaded) { init(); } }; window.removeEventListener('keydown', spacebarHandler); window.addEventListener('keydown', spacebarHandler); }
@@ -195,13 +199,19 @@
         // --- Formspree function REMOVED ---
 
         // --- Initial Start ---
-        // Start with 'loading' state until images attempt load
+        console.log("Setting initial game state to 'loading'.");
         gameState = 'loading';
-        initScreenUpdate(); // Show initial loading message
-
-        // Then run init logic after image load attempt finishes
-        if (imageLoadPromise) { imageLoadPromise.finally(() => { console.log("Image promises settled. Running init()."); if(gameState === 'loading') gameState = 'start'; init(); }); }
-        else { console.log("No images defined, running init() immediately."); imagesLoaded = true; gameState = 'start'; init(); }
+        // If images start loading immediately, wait for them, otherwise init right away
+        if (totalImages > 0 && !imagesLoaded) {
+            initScreenUpdate(); // Show Loading Assets...
+            // Logic inside image loading 'finally' block will call init()
+        } else {
+            // Either no images or they loaded instantly from cache
+            console.log("No images to wait for or already loaded, running init() immediately.");
+            imagesLoaded = true; // Ensure flag is set
+            gameState = 'start';
+            init();
+        }
 
     }); // END of DOMContentLoaded listener
 </script>
