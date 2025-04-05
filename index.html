@@ -35,20 +35,15 @@
     </div>
 
     <img id="imgKyrosil" src="https://kyrosil.wordpress.com/wp-content/uploads/2025/04/cropped-adsiz_tasarim-removebg-preview-1.png?w=300" alt="Kyrosil Logo" style="display:none;">
-    <img id="imgYunan" src="YUNANDAN_GELSIN_LOGO_URL_BURAYA" alt="Yunandan Gelsin" style="display:none;">
+    <img id="imgYunan" src="https://kyrosil.wordpress.com/wp-content/uploads/2025/04/logo.png?w=300" alt="Yunandan Gelsin" style="display:none;">
     <img id="imgEU" src="https://th.bing.com/th/id/OIP.va7Akw5aa2xy5MfY8chgFwHaE8?w=306&h=204&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" alt="EU Logo" style="display:none;">
     <img id="imgNATO" src="https://th.bing.com/th/id/OIP.ZckvoU6nT56TJO0XQSMDdgAAAA?w=198&h=180&c=7&r=0&o=5&pid=1.7" alt="NATO Logo" style="display:none;">
 
 
 <script>
     (function() { // IIFE Start
-        const canvas = document.getElementById('gameCanvas');
-        // Add checks for crucial elements early
-        if (!canvas || typeof canvas.getContext !== 'function') {
-             console.error("Canvas element not found or not supported!");
-             alert("Error: Canvas element not found or not supported!");
-             return; // Stop script if canvas is missing
-        }
+        const canvas = document.getElementById('prizeWheelCanvas');
+        if (!canvas || typeof canvas.getContext !== 'function') { console.error("Canvas element not found or not supported!"); alert("Error: Canvas element not found or not supported!"); return; }
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('gameOverlay');
         const overlayTitle = document.getElementById('overlayTitle');
@@ -59,92 +54,32 @@
         const restartButton = document.getElementById('restartButton');
         const startButton = document.getElementById('startButton');
 
-        // Image References
         const imgKyrosil = document.getElementById('imgKyrosil');
-        const imgYunan = document.getElementById('imgYunan');
+        const imgYunan = document.getElementById('imgYunan'); // Reference to the image with WP URL
         const imgEU = document.getElementById('imgEU');
         const imgNATO = document.getElementById('imgNATO');
-        const imagesToLoad = [imgKyrosil, imgYunan, imgEU, imgNATO]; // Array for easier management
+        const imagesToLoad = [imgKyrosil, imgYunan, imgEU, imgNATO];
 
-        let imagesLoaded = false;
-        let loadedCount = 0;
-        let errorCount = 0;
-        const totalImages = imagesToLoad.filter(img => img !== null).length; // Count only existing img elements
-
+        let imagesLoaded = false; let loadedCount = 0; let errorCount = 0; const totalImages = imagesToLoad.filter(img => img !== null).length;
         console.log(`Attempting to load ${totalImages} images.`);
 
-        // --- Enhanced Image Preloading Logic with Logging ---
-        function imageLoadHandler(imgElement) {
-            console.log(`Loaded! image: ${imgElement.id}`);
-            checkAllImagesLoaded();
-        }
-        function imageErrorHandler(imgElement) {
-            console.error(`ERROR loading image: ${imgElement.id} - URL: ${imgElement.src}`);
-            errorCount++;
-            checkAllImagesLoaded(); // Count error as "loaded" for progress, but log error
-        }
-
-        function checkAllImagesLoaded() {
-            loadedCount++;
-            console.log(`Progress: ${loadedCount}/${totalImages} assets checked (Errors: ${errorCount})`);
-            if (loadedCount >= totalImages) {
-                console.log("Asset loading sequence complete.");
-                if (errorCount > 0) {
-                    console.warn(`There were ${errorCount} errors loading images. Game might have missing assets.`);
-                     // Decide if game can start even with errors? For now, yes.
-                }
-                imagesLoaded = true;
-                // Update screen ONLY if it's currently in the start state
-                if(gameState === 'start' && overlay) { // Check if overlay exists
-                    initScreenUpdate();
-                } else {
-                    console.log("State is not 'start', screen update skipped for now.");
-                }
-            }
-        }
-
-        imagesToLoad.forEach(img => {
-             if (!img) {
-                 // This case should ideally not happen if totalImages is calculated correctly
-                 console.error("An image element reference is null!");
-                 // loadedCount++; // Should not increment here if img is null
-                 return;
-             }
-             console.log(`Loading image: ${img.id}... URL: ${img.src}`);
-             // Clear previous listeners to be safe
-             img.onload = null;
-             img.onerror = null;
-
-             if (img.complete && img.naturalHeight !== 0) {
-                 console.log(`Image ${img.id} already complete.`);
-                 imageLoadHandler(img); // Treat as loaded
-             } else {
-                 img.onload = () => imageLoadHandler(img);
-                 img.onerror = () => imageErrorHandler(img);
-                 // Double check src, especially placeholders
-                 if (!img.src || img.src.includes('PLACEHOLDER') || img.src.includes('_URL_BURAYA')) {
-                     console.warn(`Image ${img.id} has a placeholder URL or is empty.`);
-                      // Treat placeholder as an error for loading purposes? Let's count it as an error.
-                      // imageErrorHandler(img); // Or just let the native onerror handle it if src is truly invalid
-                 } else if (img.src.startsWith('https://th.bing.com/')) {
-                     console.warn(`Image ${img.id} uses a Bing URL, which might be unreliable.`);
-                 }
-             }
-        });
+        // --- Enhanced Image Preloading Logic ---
+        function imageLoadHandler(imgElement) { console.log(`Loaded! image: ${imgElement.id}`); checkAllImagesLoaded(); }
+        function imageErrorHandler(imgElement) { console.error(`ERROR loading image: ${imgElement.id} - URL: ${imgElement.src}`); errorCount++; checkAllImagesLoaded(); }
+        function checkAllImagesLoaded() { loadedCount++; console.log(`Progress: ${loadedCount}/${totalImages} assets checked (Errors: ${errorCount})`); if (loadedCount >= totalImages) { console.log("Asset loading sequence complete."); if (errorCount > 0) { console.warn(`There were ${errorCount} errors loading images. Game might have missing assets.`); } imagesLoaded = true; if(gameState === 'start' && overlay) { initScreenUpdate(); } else { console.log("State is not 'start', screen update skipped for now."); } } }
+        imagesToLoad.forEach(img => { if (!img) { return; } console.log(`Loading image: ${img.id}... URL: ${img.src}`); img.onload = null; img.onerror = null; if (img.complete && img.naturalHeight !== 0) { console.log(`Image ${img.id} already complete.`); imageLoadHandler(img); } else { img.onload = () => imageLoadHandler(img); img.onerror = () => imageErrorHandler(img); if (!img.src || img.src.includes('PLACEHOLDER')) { console.warn(`Image ${img.id} might have a placeholder URL.`); } else if (img.src.startsWith('https://th.bing.com/')) { console.warn(`Image ${img.id} uses a Bing URL.`); } else if (img.src.includes('kyrosil.wordpress.com')) { console.warn(`Image ${img.id} uses a WordPress.com URL - check console for CORS errors!`);} } }); // Added check for WP.com URL
 
         // --- Game Settings, State, Play Limit, Prize Codes (Unchanged) ---
         const birdProps = { x: 60, y: 150, width: 35, height: 35, gravity: 0.35, lift: -7, velocity: 0 };
-        const pipeProps = { width: 60, gap: 120, color: '#006400', speed: 2.5, frequency: 85 };
-        const collectibleProps = { size: 25, score: 5 };
-        const targetObstacles = 20; const minWinTimeSeconds = 45; const maxCollectiblesToSpawn = 6; const collectibleSpawnObstacles = [2, 5, 8, 11, 14, 17]; let spawnedCollectiblesCount = 0;
+        const pipeProps = { width: 60, gap: 120, color: '#006400', speed: 2.5, frequency: 85 }; const collectibleProps = { size: 25, score: 5 }; const targetObstacles = 20; const minWinTimeSeconds = 45; const maxCollectiblesToSpawn = 6; const collectibleSpawnObstacles = [2, 5, 8, 11, 14, 17]; let spawnedCollectiblesCount = 0;
         let pipes = []; let collectibles = []; let obstacleScore = 0; let collectibleScore = 0; let frames = 0; let gameState = 'start'; let startTime = null; let animationFrameId = null;
         const playLimitKey = 'kyrosJumpPlays_v2'; const lastPlayDateKey = 'kyrosJumpLastPlayDate_v2'; const maxPlaysPerDay = 5;
         const prizeCodes = []; function generateRandomCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = 'KYROSIL-'; for (let i = 0; i < 5; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); } return code; } const generatedCodes = new Set(); while(generatedCodes.size < 50 && prizeCodes.length < 50) { const newCode = generateRandomCode(); if (!generatedCodes.has(newCode)) { generatedCodes.add(newCode); prizeCodes.push(newCode); } }
 
-        // --- Game Functions (Unchanged, except for potential image checks) ---
-         function checkPlayLimit() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); if (lastPlayDate !== today) { plays = 0; localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '0'); } if (plays >= maxPlaysPerDay) { /*console.log("Daily play limit reached.");*/ return false; } return true; }
+        // --- Game Functions (Unchanged) ---
+         function checkPlayLimit() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); if (lastPlayDate !== today) { plays = 0; localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '0'); } if (plays >= maxPlaysPerDay) { return false; } return true; }
          function incrementPlayCount() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); if (lastPlayDate !== today) { localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '1'); } else { let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); plays++; localStorage.setItem(playLimitKey, plays.toString()); console.log(`Play count: ${plays}/${maxPlaysPerDay}`); } }
-         function resetGame() { if (!imagesLoaded) { console.warn("Reset blocked: Images not loaded."); return; } if (!checkPlayLimit()) { showOverlay('Limit Reached!', `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`, false, false); return; } birdProps.y = 150; birdProps.velocity = 0; pipes = []; collectibles = []; obstacleScore = 0; collectibleScore = 0; frames = 0; startTime = Date.now(); spawnedCollectiblesCount = 0; gameState = 'playing'; hideOverlay(); if (animationFrameId) cancelAnimationFrame(animationFrameId); loop(); }
+         function resetGame() { if (!imagesLoaded) return; if (!checkPlayLimit()) { showOverlay('Limit Reached!', `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`, false, false); return; } birdProps.y = 150; birdProps.velocity = 0; pipes = []; collectibles = []; obstacleScore = 0; collectibleScore = 0; frames = 0; startTime = Date.now(); spawnedCollectiblesCount = 0; gameState = 'playing'; hideOverlay(); if (animationFrameId) cancelAnimationFrame(animationFrameId); loop(); }
          function birdJump() { if (gameState === 'playing') birdProps.velocity = birdProps.lift; }
          function updatePipesAndCollectibles() { if (frames % pipeProps.frequency === 0) { let pipeY = Math.floor(Math.random() * (canvas.height - pipeProps.gap - 150)) + 75; pipes.push({ x: canvas.width, y: 0, height: pipeY, passed: false }); pipes.push({ x: canvas.width, y: pipeY + pipeProps.gap, height: canvas.height - pipeY - pipeProps.gap, passed: false }); if (collectibleSpawnObstacles.includes(obstacleScore) && spawnedCollectiblesCount < maxCollectiblesToSpawn) { const collectibleType = Math.random() < 0.5 ? 'EU' : 'NATO'; const collectibleImg = collectibleType === 'EU' ? imgEU : imgNATO; const collectibleY = pipeY + (pipeProps.gap / 2) - (collectibleProps.size / 2) + (Math.random() * 40 - 20); const collectibleX = canvas.width + pipeProps.width; if (collectibleImg && collectibleImg.complete && collectibleImg.naturalHeight !== 0) { collectibles.push({ x: collectibleX, y: collectibleY, type: collectibleType, img: collectibleImg, collected: false, offscreen: false }); spawnedCollectiblesCount++; } } } for (let i = pipes.length - 1; i >= 0; i--) { pipes[i].x -= pipeProps.speed; if (pipes[i].x + pipeProps.width < 0) pipes.splice(i, 1); } for (let i = collectibles.length - 1; i >= 0; i--) { collectibles[i].x -= pipeProps.speed; if (collectibles[i].x + collectibleProps.size < 0) collectibles[i].offscreen = true; } }
          function updateBird() { birdProps.velocity += birdProps.gravity; birdProps.y += birdProps.velocity; if (birdProps.y + birdProps.height > canvas.height) { birdProps.y = canvas.height - birdProps.height; birdProps.velocity = 0; setGameOver(); } if (birdProps.y < 0) { birdProps.y = 0; birdProps.velocity = 0; } }
@@ -169,7 +104,6 @@
 
         // --- Sounds (Placeholder) ---
         const loseSound = null; const winSound = null; function playSound(soundElement) { if (soundElement?.play) { soundElement.currentTime = 0; soundElement.play().catch(e => console.warn("Sound play failed:", e)); } }
-
         // --- Formspree function ---
         function sendSpinResultToBackend(dataToSend) { /* ... (same) ... */ const formspreeEndpoint = 'https://formspree.io/f/xblgznvz'; fetch(formspreeEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(dataToSend) }).then(response => { if (response.ok) { console.log('Formspree submission successful.'); return response.json(); } else { response.json().then(data => { console.error('Formspree submission error:', response.statusText, data); }); } }).then(data => { if(data) console.log('Formspree success response:', data); }).catch(error => { console.error('Network error sending to Formspree:', error); }); }
 
