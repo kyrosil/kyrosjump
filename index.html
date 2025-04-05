@@ -5,35 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>KyrosJump!</title>
     <style>
-        /* Basic Styling - From User's Working Code */
+        /* CSS unchanged */
         body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f0f0; font-family: sans-serif; overflow: hidden; }
         canvas { border: 1px solid #ccc; display: block; background-color: #87CEEB; }
-        #gameContainer { position: relative; width: 360px; height: 540px; margin: auto; overflow: hidden; background-color: #87CEEB; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 1px solid #ccc;} /* Added Container */
+        #gameContainer { position: relative; width: 360px; height: 540px; margin: auto; overflow: hidden; background-color: #87CEEB; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 1px solid #ccc;}
         #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: rgba(0,0,0,0.7); color: white; text-align: center; visibility: hidden; opacity: 0; transition: opacity 0.3s ease, visibility 0s linear 0.3s; font-size: 1.3em; z-index: 10; padding: 15px; box-sizing: border-box; }
         #gameOverlay.visible { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
         #gameOverlay h2 { margin-bottom: 10px; font-size: 1.5em; }
         #overlayText { margin-bottom: 15px; font-size: 0.9em; }
-        /* prizeInfo div removed */
-        #randomCodeContainer { margin-top: 15px; }
-        #randomCode { padding: 8px 12px; background-color: #fff; color: #e74c3c; font-weight: bold; border-radius: 5px; font-size: 1em; user-select: all; display: inline-block;}
+        /* Renamed this for clarity */
+        #prizeTierText { margin-top: 15px; font-weight: bold; color: #ffd700; font-size: 1.1em; }
+        #claimCodeContainer { margin-top: 10px; } /* Keep container for claim code */
+        #claimCode { padding: 8px 12px; background-color: #fff; color: #e74c3c; font-weight: bold; border-radius: 5px; font-size: 1em; user-select: all; display: inline-block;}
         #restartButton, #startButton { margin-top: 20px; padding: 12px 25px; font-size: 0.9em; cursor: pointer; border: none; color: white; border-radius: 5px; }
         #startButton { background-color: #2ecc71;}
         #restartButton { background-color: #3498db;}
-        .main-title { color: #2c3e50; font-size: 2em; margin-bottom: 20px; font-weight: 600; text-align: center; } /* Adjusted margin */
-        /* Removed visible logo styles */
+        .visible-logo-container { text-align: center; margin-bottom: 15px; padding-top: 15px; }
+        .visible-logo { max-width: 150px; height: auto; border-radius: 5px; }
+        .main-title { color: #2c3e50; font-size: 2em; margin-bottom: 10px; font-weight: 600; text-align: center; }
     </style>
 </head>
 <body>
      <div style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
         <h1 class="main-title">KyrosJump!</h1>
-        <div id="gameContainer">
+        <div class="visible-logo-container">
+             <img class="visible-logo" src="slider_picture_1.png" alt="Yunandan Gelsin">
+         </div>
+         <div id="gameContainer">
              <canvas id="gameCanvas" width="360" height="540"></canvas>
              <div id="gameOverlay">
                  <h2 id="overlayTitle">KyrosJump!</h2>
                  <p id="overlayText">Loading Assets...</p>
-                 <div id="randomCodeContainer" style="display: none;">
-                     Your Code: <span id="randomCode"></span>
-                     <p style="font-size: 0.7em; margin-top: 8px;">(Save this code! You might need it!)</p>
+                 <div id="prizeTierText" style="display: none;"></div>
+                 <div id="claimCodeContainer" style="display: none;">
+                     Your Claim Code: <span id="claimCode"></span>
+                     <p style="font-size: 0.7em; margin-top: 8px;">(Save this code to claim your prize!)</p>
                  </div>
                  <button id="restartButton" style="display: none;">Restart</button>
                  <button id="startButton" disabled>Start Game</button>
@@ -44,91 +50,45 @@
     <img id="imgKyrosil" src="cropped-adsiz_tasarim-removebg-preview-1.png" alt="Kyrosil Logo" style="display:none;">
     <img id="imgEU" src="download.jpg" alt="EU Logo" style="display:none;">
     <img id="imgNATO" src="OIP.jpg" alt="NATO Logo" style="display:none;">
-    <script>
-    // Based on user's previously provided "working" code structure, with requested final mods.
+
+<script>
     document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOM Loaded. Initializing KyrosJump (v_UserBase_Final)...");
+        console.log("DOM Loaded. Initializing KyrosJump (v_FinalTieredClaimCode)...");
 
         // --- Elements ---
         const canvas = document.getElementById('gameCanvas');
         if (!canvas || typeof canvas.getContext !== 'function') { console.error("FATAL: Canvas not found!"); return; }
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('gameOverlay');
+        const startButton = document.getElementById('startButton');
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayText = document.getElementById('overlayText');
-        // prizeInfoSpan removed
-        const randomCodeContainer = document.getElementById('randomCodeContainer');
-        const randomCodeSpan = document.getElementById('randomCode');
+        const prizeTierTextSpan = document.getElementById('prizeTierText'); // Renamed from prizeInfoSpan
+        const claimCodeContainer = document.getElementById('claimCodeContainer');
+        const claimCodeSpan = document.getElementById('claimCode');
         const restartButton = document.getElementById('restartButton');
-        const startButton = document.getElementById('startButton');
         const imgKyrosil = document.getElementById('imgKyrosil');
         const imgEU = document.getElementById('imgEU');
         const imgNATO = document.getElementById('imgNATO');
 
-        // Basic Element Checks
-        if (!overlay || !overlayTitle || !overlayText || !randomCodeContainer || !randomCodeSpan || !restartButton || !startButton || !imgKyrosil || !imgEU || !imgNATO) {
-             console.error("FATAL: One or more essential elements missing!"); alert("Essential elements missing."); return;
+        // Check elements
+        if (!overlay || !overlayTitle || !overlayText || !prizeTierTextSpan || !claimCodeContainer || !claimCodeSpan || !restartButton || !startButton || !imgKyrosil || !imgEU || !imgNATO) {
+             console.error("FATAL: One or more essential HTML elements missing!"); alert("Essential elements missing."); return;
         }
         console.log("Essential elements found.");
 
-        // --- Image Preloading (Kyrosil, EU, NATO - Using user's simpler logic base) ---
-        const imagesToLoad = [imgKyrosil, imgEU, imgNATO]; // Only 3 images
-        let imagesLoaded = false; let loadedCount = 0; let errorCount = 0;
-        const totalImages = imagesToLoad.filter(img => img !== null).length; // Should be 3
+        // --- Image Preloading (Using simpler logic from user's 'working' code) ---
+        const imagesToLoad = [imgKyrosil, imgEU, imgNATO];
+        let imagesLoaded = false; let loadedCount = 0; let errorCount = 0; const totalImages = imagesToLoad.filter(img => img).length;
         console.log(`Attempting to load ${totalImages} images...`);
+        function checkAllImagesLoaded() { loadedCount++; console.log(`Image check: ${loadedCount}/${totalImages}`); if (loadedCount >= totalImages) { console.log(`Assets complete. Errors: ${errorCount}`); imagesLoaded = true; if (errorCount > 0) console.warn("Some images failed!"); if(gameState === 'loading' || gameState === 'start') { gameState = 'start'; initScreenUpdate(); } } }
+        imagesToLoad.forEach(img => { if (!img) { console.error("Null image element!"); loadedCount++; return; } if (!img.src || img.src.endsWith('/')) { console.error(`Invalid src: ${img.id}`); errorCount++; checkAllImagesLoaded(); return; } console.log(`Checking: ${img.id}`); if (img.complete && img.naturalHeight !== 0) { console.log(`${img.id} already complete.`); setTimeout(checkAllImagesLoaded, 0); } else { img.onload = () => { console.log(`Loaded: ${img.id}`); checkAllImagesLoaded(); }; img.onerror = () => { console.error(`ERROR loading: ${img.id}`); errorCount++; checkAllImagesLoaded(); }; } });
+        if (loadedCount >= totalImages && !imagesLoaded) { console.log("All images cached."); imagesLoaded = true; if(gameState === 'loading') gameState = 'start'; }
 
-        // Simpler loading check from user's provided code
-        function checkAllImagesLoaded() {
-            loadedCount++;
-            console.log(`Image check progress: ${loadedCount}/${totalImages}`);
-            if (loadedCount >= totalImages) {
-                console.log(`Asset loading complete. Errors: ${errorCount}`);
-                imagesLoaded = true;
-                if (errorCount > 0) console.warn("Some images failed to load! Using fallbacks.");
-                 // Update screen ONLY if it's currently in the start/loading state
-                if(gameState === 'loading' || gameState === 'start') {
-                    gameState = 'start'; // Ensure state is start
-                    initScreenUpdate();
-                }
-            }
-        }
-        imagesToLoad.forEach(img => {
-             if (!img) { console.error("Null image element found!"); loadedCount++; return; }
-             // Check src before setting listeners
-             if (!img.src || img.src.endsWith('/')) {
-                  console.error(`Image ${img.id} has invalid src: ${img.src}`);
-                  errorCount++;
-                  checkAllImagesLoaded(); // Count as checked (with error)
-                  return;
-             }
-             console.log(`Checking image: ${img.id} src: ${img.src}`);
-             if (img.complete && img.naturalHeight !== 0) {
-                  console.log(`Image ${img.id} already complete.`);
-                  // Use setTimeout to avoid potential race condition
-                  setTimeout(checkAllImagesLoaded, 0);
-             } else {
-                  img.onload = () => { console.log(`Loaded: ${img.id}`); checkAllImagesLoaded(); };
-                  img.onerror = () => { console.error(`ERROR loading: ${img.id}`); errorCount++; checkAllImagesLoaded(); };
-             }
-        });
-         // Initial check in case all were cached
-         if (loadedCount >= totalImages && !imagesLoaded) {
-              console.log("All images were already complete (initial check).");
-              imagesLoaded = true;
-              if(gameState === 'loading') gameState = 'start';
-         }
+        // --- Game Settings, State, Play Limit ---
+        const birdProps = { x: 60, y: 150, width: 40, height: 40, gravity: 0.35, lift: -7, velocity: 0 }; const pipeProps = { width: 60, gap: 120, color: '#006400', speed: 2.5, frequency: 85 }; const collectibleProps = { size: 25, score: 5 }; const targetObstacles = 20; const minWinTimeSeconds = 30; const maxCollectiblesToSpawn = 6; const collectibleSpawnObstacles = [2, 5, 8, 11, 14, 17]; let spawnedCollectiblesCount = 0; let pipes = []; let collectibles = []; let obstacleScore = 0; let collectibleScore = 0; let frames = 0; let gameState = 'loading'; let startTime = null; let animationFrameId = null; const playLimitKey = 'kyrosJumpPlays_vFinalLocal'; const lastPlayDateKey = 'kyrosJumpLastPlayDate_vFinal'; const maxPlaysPerDay = 5;
 
-
-        // --- Game Settings (Bird size 40x40) ---
-        const birdProps = { x: 60, y: 150, width: 40, height: 40, gravity: 0.35, lift: -7, velocity: 0 }; // Bird size updated
-        const pipeProps = { width: 60, gap: 120, color: '#006400', speed: 2.5, frequency: 85 }; const collectibleProps = { size: 25, score: 5 }; const targetObstacles = 20; const minWinTimeSeconds = 30; const maxCollectiblesToSpawn = 6; const collectibleSpawnObstacles = [2, 5, 8, 11, 14, 17]; let spawnedCollectiblesCount = 0;
-        let pipes = []; let collectibles = []; let obstacleScore = 0; let collectibleScore = 0; let frames = 0; /* gameState = 'loading'; */ let startTime = null; let animationFrameId = null;
-        const playLimitKey = 'kyrosJumpPlays_vFinalLocal'; const lastPlayDateKey = 'kyrosJumpLastPlayDate_vFinal'; const maxPlaysPerDay = 5;
-
-        // --- Generate 100 Prize Codes ---
-        function generateRandomKyrosilCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = 'KYROSIL-'; for (let i = 0; i < 5; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); } return code; }
-        const prizeCodes = new Set(); while (prizeCodes.size < 100) { prizeCodes.add(generateRandomKyrosilCode()); }
-        const prizeCodeArray = Array.from(prizeCodes);
+        // Prize Codes array REMOVED
 
         // --- Game Functions ---
          function checkPlayLimit() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); if (lastPlayDate !== today) { plays = 0; localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '0'); } if (plays >= maxPlaysPerDay) { return false; } return true; }
@@ -144,52 +104,71 @@
          function drawScore() { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth= 0.5; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; const obsText = `Obstacles: ${obstacleScore}/${targetObstacles}`; const bonusText = `Bonus: ${collectibleScore}`; ctx.strokeText(obsText, 10, 10); ctx.fillText(obsText, 10, 10); ctx.strokeText(bonusText, 10, 35); ctx.fillText(bonusText, 10, 35); }
          function checkWinConditions() { const endTime = Date.now(); const elapsedTimeSeconds = (endTime - startTime) / 1000; if (!startTime || elapsedTimeSeconds < minWinTimeSeconds) { console.warn(`Anti-Cheat: Time (${elapsedTimeSeconds.toFixed(1)}s) < Min (${minWinTimeSeconds}s).`); return false; } return true; }
 
-         // Updated showOverlay - NO prizeTierText, uses randomCode
-         function showOverlay(title, text, showStart, showRestart, randomCode = '') {
-             if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !randomCodeContainer || !randomCodeSpan) { return; }
-             overlayTitle.textContent = title;
-             overlayText.textContent = text;
-             startButton.style.display = showStart ? 'inline-block' : 'none';
-             restartButton.style.display = showRestart ? 'inline-block' : 'none';
-             if (prizeTextSpan) prizeTextSpan.style.display = 'none'; // Hide removed element
-             if (randomCode) { randomCodeSpan.textContent = randomCode; randomCodeContainer.style.display = 'block'; }
-             else { randomCodeContainer.style.display = 'none'; }
-             overlay.classList.add('visible');
-         }
-         function hideOverlay() { if(overlay) overlay.classList.remove('visible'); }
-         function setGameOver() { if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over"); gameState = 'gameover'; playSound(loseSound); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;} incrementPlayCount(); showOverlay('Game Over!', `Obstacles: ${obstacleScore} | Bonus: ${collectibleScore}`, false, true); }
+        // Updated showOverlay - Uses prizeTierText and claimCode parameters
+        function showOverlay(title, text, showStart, showRestart, prizeTierText = '', claimCode = '') {
+            if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !prizeTierTextSpan || !claimCodeContainer || !claimCodeSpan) { console.error("Overlay elements missing!"); return; }
+            overlayTitle.textContent = title;
+            overlayText.textContent = text;
+            startButton.style.display = showStart ? 'inline-block' : 'none';
+            restartButton.style.display = showRestart ? 'inline-block' : 'none';
+            // Show prize tier text if provided
+            if (prizeTierText) { prizeTierTextSpan.textContent = prizeTierText; prizeTierTextSpan.style.display = 'block'; }
+            else { prizeTierTextSpan.style.display = 'none'; }
+            // Show claim code if provided
+            if (claimCode) { claimCodeSpan.textContent = claimCode; claimCodeContainer.style.display = 'block'; }
+            else { claimCodeContainer.style.display = 'none'; }
+            overlay.classList.add('visible');
+        }
+        function hideOverlay() { if(overlay) overlay.classList.remove('visible'); }
+        function setGameOver() { if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over"); gameState = 'gameover'; playSound(loseSound); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;} incrementPlayCount(); showOverlay('Game Over!', `Obstacles: ${obstacleScore} | Bonus: ${collectibleScore}`, false, true); }
 
-         // Updated setWin - NO Tiers, NO Formspree, ONLY Random Code
-         function setWin() {
-              if (gameState === 'win' || gameState === 'gameover') return;
-              console.log("Win condition met!");
-              if (checkWinConditions()) {
-                  gameState = 'win';
-                  playSound(winSound);
-                  if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;}
-                  incrementPlayCount();
+        // Function to generate tier-specific claim code
+        function generateClaimCode(scoreTier) {
+            const timestamp = Date.now().toString().slice(-5);
+            const randomChars = Math.random().toString(36).substring(2, 5).toUpperCase();
+            return `KYJMP-${scoreTier}-${randomChars}${timestamp}`;
+        }
 
-                  const totalScore = targetObstacles + collectibleScore;
-                  // Select ONE random code from the array
-                  const randomCode = prizeCodeArray[Math.floor(Math.random() * prizeCodeArray.length)];
-                  console.log(`Win! Score: ${totalScore}, Displayed Code: ${randomCode}`);
+        // Updated setWin - RE-ADDED Tiers, Uses Claim Code, NO Formspree
+        function setWin() {
+             if (gameState === 'win' || gameState === 'gameover') return;
+             console.log("Win condition met!");
+             if (checkWinConditions()) {
+                 gameState = 'win';
+                 playSound(winSound);
+                 if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;}
+                 incrementPlayCount();
 
-                  // Show overlay with score and the random code
-                  showOverlay('🎉 Congratulations! 🎉', `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`, false, true, '' /* No Prize Text */, randomCode);
+                 const totalScore = targetObstacles + collectibleScore;
+                 let prizeTierText = ''; // Text describing the prize level
+                 let prizeTierLevel = 0; // Numeric level for claim code
 
-                  // Formspree call REMOVED
+                 if (totalScore >= 50) { prizeTierText = "You qualify for the 1000 TL Voucher Tier!"; prizeTierLevel = 50; }
+                 else if (totalScore >= 40) { prizeTierText = "You qualify for the 500 TL Voucher Tier!"; prizeTierLevel = 40; }
+                 else if (totalScore >= 30) { prizeTierText = "You qualify for the 300 TL Voucher Tier!"; prizeTierLevel = 30; }
+                 else { prizeTierText = "You qualify for the 150 TL Voucher Tier!"; prizeTierLevel = 20; } // Base win (score 20-29)
 
-              } else {
-                  console.log("Anti-cheat check failed.");
-                  setGameOver();
-                  if(overlayText) overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Anti-cheat check failed.`;
-              }
-         }
+                 // Generate claim code based on tier
+                 const claimCode = generateClaimCode(prizeTierLevel);
+
+                 console.log(`Win! Score: ${totalScore}, Tier Text: ${prizeTierText}, Claim Code: ${claimCode}`);
+
+                 // Show overlay with score, prize text AND claim code
+                 showOverlay('🎉 Congratulations! 🎉', `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`, false, true, prizeTierText, claimCode);
+
+                 // Formspree call REMOVED
+
+             } else {
+                 console.log("Anti-cheat check failed.");
+                 setGameOver();
+                 if(overlayText) overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Anti-cheat check failed.`;
+             }
+        }
 
         // Game Loop (No drawBackground)
-        function loop(timestamp) { if (gameState !== 'playing') { return; } ctx.clearRect(0, 0, canvas.width, canvas.height); /* drawBackground removed */ updatePipesAndCollectibles(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
+        function loop(timestamp) { if (gameState !== 'playing') { return; } ctx.clearRect(0, 0, canvas.width, canvas.height); updatePipesAndCollectibles(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
 
-        // --- Init and Event Listeners ---
+        // --- Init and Event Listeners (Fixed) ---
         const spacebarHandler = (e) => { if (!imagesLoaded) return; if (e.code === 'Space') { e.preventDefault(); if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } };
         function initScreenUpdate() { if (!overlay || !startButton || !overlayText) {console.error("Cannot update screen: elements missing!"); return;} const canPlay = checkPlayLimit(); const plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); const playsRemaining = maxPlaysPerDay - plays; let startText = ''; if (imagesLoaded) { startText = `Plays remaining today: ${canPlay ? playsRemaining : 0}`; if (!canPlay) { startText = `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`; } } else { startText = 'Loading Assets... Please Wait...'; } console.log("Updating overlay text:", startText); showOverlay('KyrosJump!', startText, (canPlay && imagesLoaded), false); if(startButton) { startButton.disabled = !imagesLoaded || !canPlay; if (!canPlay && imagesLoaded) { startButton.style.display = 'none'; } else { startButton.style.display = 'inline-block'; } } }
         function init() { console.log("Initializing start screen..."); gameState = 'start'; if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } hideOverlay(); initScreenUpdate(); const clickOrTapHandler = (e) => { if (imagesLoaded) { if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } if (e.type === 'touchstart') e.preventDefault(); }; canvas.removeEventListener('click', clickOrTapHandler); canvas.removeEventListener('touchstart', clickOrTapHandler); canvas.addEventListener('click', clickOrTapHandler); canvas.addEventListener('touchstart', clickOrTapHandler); startButton.onclick = () => { if (gameState === 'start' && imagesLoaded && checkPlayLimit()) { resetGame(); } else { console.warn(`Start button ignored. State: ${gameState}, Loaded: ${imagesLoaded}, CanPlay: ${checkPlayLimit()}`); if (!imagesLoaded) alert("Assets loading..."); else if (!checkPlayLimit()) alert(`Daily limit reached!`); } }; restartButton.onclick = () => { console.log("Restart clicked."); if ((gameState === 'gameover' || gameState === 'win') && imagesLoaded) { init(); } }; window.removeEventListener('keydown', spacebarHandler); window.addEventListener('keydown', spacebarHandler); }
@@ -201,17 +180,11 @@
         // --- Initial Start ---
         console.log("Setting initial game state to 'loading'.");
         gameState = 'loading';
-        // If images start loading immediately, wait for them, otherwise init right away
-        if (totalImages > 0 && !imagesLoaded) {
-            initScreenUpdate(); // Show Loading Assets...
-            // Logic inside image loading 'finally' block will call init()
-        } else {
-            // Either no images or they loaded instantly from cache
-            console.log("No images to wait for or already loaded, running init() immediately.");
-            imagesLoaded = true; // Ensure flag is set
-            gameState = 'start';
-            init();
-        }
+        initScreenUpdate(); // Show loading message immediately
+
+        // Wait for image loading promise to settle then init
+        if (imageLoadPromise) { imageLoadPromise.finally(() => { console.log("Image promises settled. Running init() via finally."); if(gameState === 'loading') gameState = 'start'; init(); }); }
+        else { console.log("No images to load, running init() immediately."); imagesLoaded = true; gameState = 'start'; init(); }
 
     }); // END of DOMContentLoaded listener
 </script>
