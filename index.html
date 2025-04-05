@@ -21,7 +21,7 @@
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="360" height="540"></canvas>
+    <canvas id="prizeWheelCanvas" width="360" height="540"></canvas>
     <div id="gameOverlay">
         <h2 id="overlayTitle">KyrosJump!</h2>
         <p id="overlayText">Loading Assets...</p>
@@ -35,15 +35,22 @@
     </div>
 
     <img id="imgKyrosil" src="https://kyrosil.wordpress.com/wp-content/uploads/2025/04/cropped-adsiz_tasarim-removebg-preview-1.png?w=300" alt="Kyrosil Logo" style="display:none;">
-    <img id="imgYunan" src="https://kyrosil.wordpress.com/wp-content/uploads/2025/04/logo.png?w=300" alt="Yunandan Gelsin" style="display:none;">
-    <img id="imgEU" src="https://th.bing.com/th/id/OIP.va7Akw5aa2xy5MfY8chgFwHaE8?w=306&h=204&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" alt="EU Logo" style="display:none;">
+    <img id="imgYunan" src="YUNANDAN_GELSIN_LOGO_URL_BURAYA" alt="Yunandan Gelsin" style="display:none;"> <img id="imgEU" src="https://th.bing.com/th/id/OIP.va7Akw5aa2xy5MfY8chgFwHaE8?w=306&h=204&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" alt="EU Logo" style="display:none;">
     <img id="imgNATO" src="https://th.bing.com/th/id/OIP.ZckvoU6nT56TJO0XQSMDdgAAAA?w=198&h=180&c=7&r=0&o=5&pid=1.7" alt="NATO Logo" style="display:none;">
 
 
 <script>
-    (function() { // IIFE Start
+    // Wrap entire game logic in DOMContentLoaded listener
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM Loaded. Initializing KyrosJump...");
+
         const canvas = document.getElementById('prizeWheelCanvas');
-        if (!canvas || typeof canvas.getContext !== 'function') { console.error("Canvas element not found or not supported!"); alert("Error: Canvas element not found or not supported!"); return; }
+        // Add checks for crucial elements early
+        if (!canvas || typeof canvas.getContext !== 'function') {
+             console.error("Canvas element not found or not supported AFTER DOMContentLoaded!");
+             alert("Error: Canvas element could not be initialized. Please refresh.");
+             return; // Stop script if canvas is missing
+        }
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('gameOverlay');
         const overlayTitle = document.getElementById('overlayTitle');
@@ -54,20 +61,47 @@
         const restartButton = document.getElementById('restartButton');
         const startButton = document.getElementById('startButton');
 
+        // Check other crucial elements
+        if (!overlay || !overlayTitle || !overlayText || !prizeInfoSpan || !claimCodeContainer || !claimCodeSpan || !restartButton || !startButton) {
+            console.error("One or more overlay elements are missing in the HTML!");
+            alert("Error: UI elements missing. Cannot start game.");
+            return;
+        }
+
+        // Image References
         const imgKyrosil = document.getElementById('imgKyrosil');
-        const imgYunan = document.getElementById('imgYunan'); // Reference to the image with WP URL
+        const imgYunan = document.getElementById('imgYunan');
         const imgEU = document.getElementById('imgEU');
         const imgNATO = document.getElementById('imgNATO');
         const imagesToLoad = [imgKyrosil, imgYunan, imgEU, imgNATO];
 
-        let imagesLoaded = false; let loadedCount = 0; let errorCount = 0; const totalImages = imagesToLoad.filter(img => img !== null).length;
+        let imagesLoaded = false; let loadedCount = 0; let errorCount = 0;
+        const totalImages = imagesToLoad.filter(img => img !== null).length;
         console.log(`Attempting to load ${totalImages} images.`);
 
-        // --- Enhanced Image Preloading Logic ---
-        function imageLoadHandler(imgElement) { console.log(`Loaded! image: ${imgElement.id}`); checkAllImagesLoaded(); }
-        function imageErrorHandler(imgElement) { console.error(`ERROR loading image: ${imgElement.id} - URL: ${imgElement.src}`); errorCount++; checkAllImagesLoaded(); }
-        function checkAllImagesLoaded() { loadedCount++; console.log(`Progress: ${loadedCount}/${totalImages} assets checked (Errors: ${errorCount})`); if (loadedCount >= totalImages) { console.log("Asset loading sequence complete."); if (errorCount > 0) { console.warn(`There were ${errorCount} errors loading images. Game might have missing assets.`); } imagesLoaded = true; if(gameState === 'start' && overlay) { initScreenUpdate(); } else { console.log("State is not 'start', screen update skipped for now."); } } }
-        imagesToLoad.forEach(img => { if (!img) { return; } console.log(`Loading image: ${img.id}... URL: ${img.src}`); img.onload = null; img.onerror = null; if (img.complete && img.naturalHeight !== 0) { console.log(`Image ${img.id} already complete.`); imageLoadHandler(img); } else { img.onload = () => imageLoadHandler(img); img.onerror = () => imageErrorHandler(img); if (!img.src || img.src.includes('PLACEHOLDER')) { console.warn(`Image ${img.id} might have a placeholder URL.`); } else if (img.src.startsWith('https://th.bing.com/')) { console.warn(`Image ${img.id} uses a Bing URL.`); } else if (img.src.includes('kyrosil.wordpress.com')) { console.warn(`Image ${img.id} uses a WordPress.com URL - check console for CORS errors!`);} } }); // Added check for WP.com URL
+
+        // --- Image Preloading Logic ---
+        function checkAllImagesLoaded() {
+            loadedCount++;
+            console.log(`Progress: ${loadedCount}/${totalImages} assets checked (Errors: ${errorCount})`);
+            if (loadedCount >= totalImages) {
+                console.log("Asset loading sequence complete.");
+                if (errorCount > 0) { console.warn(`There were ${errorCount} errors loading images.`); }
+                imagesLoaded = true;
+                if(gameState === 'start') { initScreenUpdate(); }
+                else { console.log("State is not 'start' when images finished, screen update skipped."); }
+            }
+        }
+        function imageLoadHandler(imgElement) { if(!imgElement) return; console.log(`Loaded! image: ${imgElement.id}`); checkAllImagesLoaded(); }
+        function imageErrorHandler(imgElement) { if(!imgElement) return; console.error(`ERROR loading image: ${imgElement.id} - URL: ${imgElement.src}`); errorCount++; checkAllImagesLoaded(); }
+
+        imagesToLoad.forEach(img => {
+             if (!img) { return; } // Skip if element doesn't exist
+             console.log(`Loading image: ${img.id}... URL: ${img.src}`);
+             img.onload = null; img.onerror = null; // Clear previous handlers
+             if (img.complete && img.naturalHeight !== 0) { console.log(`Image ${img.id} already complete.`); imageLoadHandler(img); }
+             else { img.onload = () => imageLoadHandler(img); img.onerror = () => imageErrorHandler(img); if (!img.src || img.src.includes('PLACEHOLDER') || img.src.includes('_URL_BURAYA')) { console.warn(`Image ${img.id} has a placeholder URL.`); imageErrorHandler(img); /* Treat placeholder as error */ } else if (img.src.startsWith('https://th.bing.com/')) { console.warn(`Image ${img.id} uses a Bing URL.`); } else if (img.src.includes('kyrosil.wordpress.com')) { console.warn(`Image ${img.id} uses a WordPress.com URL - check console for CORS errors!`); } }
+        });
 
         // --- Game Settings, State, Play Limit, Prize Codes (Unchanged) ---
         const birdProps = { x: 60, y: 150, width: 35, height: 35, gravity: 0.35, lift: -7, velocity: 0 };
@@ -75,6 +109,7 @@
         let pipes = []; let collectibles = []; let obstacleScore = 0; let collectibleScore = 0; let frames = 0; let gameState = 'start'; let startTime = null; let animationFrameId = null;
         const playLimitKey = 'kyrosJumpPlays_v2'; const lastPlayDateKey = 'kyrosJumpLastPlayDate_v2'; const maxPlaysPerDay = 5;
         const prizeCodes = []; function generateRandomCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = 'KYROSIL-'; for (let i = 0; i < 5; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); } return code; } const generatedCodes = new Set(); while(generatedCodes.size < 50 && prizeCodes.length < 50) { const newCode = generateRandomCode(); if (!generatedCodes.has(newCode)) { generatedCodes.add(newCode); prizeCodes.push(newCode); } }
+
 
         // --- Game Functions (Unchanged) ---
          function checkPlayLimit() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); if (lastPlayDate !== today) { plays = 0; localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '0'); } if (plays >= maxPlaysPerDay) { return false; } return true; }
@@ -90,17 +125,29 @@
          function drawBackground() { if (imgYunan && imgYunan.complete && imgYunan.naturalHeight !== 0) { ctx.globalAlpha = 0.08; const logoWidth = imgYunan.naturalWidth * 0.4; const logoHeight = imgYunan.naturalHeight * 0.4; ctx.drawImage(imgYunan, centerX - logoWidth/2, centerY - logoHeight/2, logoWidth, logoHeight); ctx.globalAlpha = 1.0; } }
          function drawScore() { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth= 0.5; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; const obsText = `Obstacles: ${obstacleScore}/${targetObstacles}`; const bonusText = `Bonus: ${collectibleScore}`; ctx.strokeText(obsText, 10, 10); ctx.fillText(obsText, 10, 10); ctx.strokeText(bonusText, 10, 35); ctx.fillText(bonusText, 10, 35); }
          function checkWinConditions() { const endTime = Date.now(); const elapsedTimeSeconds = (endTime - startTime) / 1000; if (!startTime || elapsedTimeSeconds < minWinTimeSeconds) { console.warn(`Anti-Cheat: Time (${elapsedTimeSeconds.toFixed(1)}s) < Min (${minWinTimeSeconds}s).`); return false; } return true; }
-         function showOverlay(title, text, showStart, showRestart, prizeTierText = '', claimCode = '') { if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !prizeInfoSpan || !claimCodeContainer || !claimCodeSpan) { console.error("Overlay elements missing!"); return; } overlayTitle.textContent = title; overlayText.textContent = text; startButton.style.display = showStart ? 'inline-block' : 'none'; restartButton.style.display = showRestart ? 'inline-block' : 'none'; if (prizeTierText) { prizeInfoSpan.textContent = prizeTierText; prizeInfoSpan.style.display = 'block'; } else { prizeInfoSpan.style.display = 'none'; } if (claimCode) { claimCodeSpan.textContent = claimCode; claimCodeContainer.style.display = 'block'; } else { claimCodeContainer.style.display = 'none'; } overlay.classList.add('visible'); }
+         function showOverlay(title, text, showStart, showRestart, prizeTierText = '', claimCode = '') { if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !prizeInfoSpan || !claimCodeContainer || !claimCodeSpan) { console.error("Overlay elements missing for showOverlay!"); return; } overlayTitle.textContent = title; overlayText.textContent = text; startButton.style.display = showStart ? 'inline-block' : 'none'; restartButton.style.display = showRestart ? 'inline-block' : 'none'; if (prizeTierText) { prizeInfoSpan.textContent = prizeTierText; prizeInfoSpan.style.display = 'block'; } else { prizeInfoSpan.style.display = 'none'; } if (claimCode) { claimCodeSpan.textContent = claimCode; claimCodeContainer.style.display = 'block'; } else { claimCodeContainer.style.display = 'none'; } overlay.classList.add('visible'); }
          function hideOverlay() { if(overlay) overlay.classList.remove('visible'); }
          function setGameOver() { if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over - State Triggered"); gameState = 'gameover'; playSound(loseSound); if (animationFrameId) cancelAnimationFrame(animationFrameId); incrementPlayCount(); showOverlay('Game Over!', `Obstacles: ${obstacleScore} | Bonus: ${collectibleScore}`, false, true); }
          function generateClaimCode(scoreTier) { const timestamp = Date.now().toString().slice(-5); const randomChars = Math.random().toString(36).substring(2, 5).toUpperCase(); return `KYJMP-${scoreTier}-${randomChars}${timestamp}`; }
          function setWin() { if (gameState === 'win' || gameState === 'gameover') return; console.log("Target obstacles reached!"); if (checkWinConditions()) { gameState = 'win'; playSound(winSound); if (animationFrameId) cancelAnimationFrame(animationFrameId); incrementPlayCount(); const totalScore = targetObstacles + collectibleScore; let prizeTierText = ''; let prizeTierLevel = 0; let claimCode = ''; if (totalScore >= 50) { prizeTierText = "You reached the 1000 TL Voucher Tier!"; prizeTierLevel = 50; } else if (totalScore >= 40) { prizeTierText = "You reached the 500 TL Voucher Tier!"; prizeTierLevel = 40; } else if (totalScore >= 30) { prizeTierText = "You reached the 300 TL Voucher Tier!"; prizeTierLevel = 30; } else { prizeTierText = "You reached the 150 TL Voucher Tier!"; prizeTierLevel = 20; } claimCode = generateClaimCode(prizeTierLevel); console.log(`Win! Score: ${totalScore}, Tier: ${prizeTierLevel}, Claim: ${claimCode}`); showOverlay('🎉 Congratulations! 🎉', `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`, false, true, prizeTierText, claimCode); const winData = { status: 'KyrosJump Win', finalScore: totalScore, obstacleScore: obstacleScore, bonusScore: collectibleScore, prizeTier: prizeTierLevel, claimCode: claimCode, winTimestamp: new Date().toISOString(), /* Add email/IG if collected */ }; sendSpinResultToBackend(winData); } else { console.log("Anti-cheat check failed."); setGameOver(); if(overlayText) overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Anti-cheat check failed.`; } }
          function loop(timestamp) { if (gameState !== 'playing') return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawBackground(); updatePipesAndCollectibles(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
 
-        // --- Init and Event Listeners (Fixed) ---
-        const spacebarHandler = (e) => { if (!imagesLoaded) return; if (e.code === 'Space') { e.preventDefault(); if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } };
-        function initScreenUpdate() { if (!overlay || !startButton || !overlayText) return; const canPlay = checkPlayLimit(); const plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); const playsRemaining = maxPlaysPerDay - plays; let startText = ''; if (imagesLoaded) { startText = `Plays remaining today: ${canPlay ? playsRemaining : 0}`; if (!canPlay) { startText = `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`; } } else { startText = 'Loading Assets...'; } showOverlay('KyrosJump!', startText, (canPlay && imagesLoaded), false); if(startButton) { startButton.disabled = !imagesLoaded || !canPlay; if (!canPlay && imagesLoaded) { startButton.style.display = 'none'; } else { startButton.style.display = 'inline-block'; } } }
-        function init() { console.log("Initializing start screen..."); gameState = 'start'; hideOverlay(); initScreenUpdate(); const clickOrTapHandler = (e) => { if (imagesLoaded) { if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } if (e.type === 'touchstart') e.preventDefault(); }; canvas.removeEventListener('click', clickOrTapHandler); canvas.removeEventListener('touchstart', clickOrTapHandler); canvas.addEventListener('click', clickOrTapHandler); canvas.addEventListener('touchstart', clickOrTapHandler); startButton.onclick = () => { if (gameState === 'start' && imagesLoaded && checkPlayLimit()) { resetGame(); } else { if (!imagesLoaded) alert("Assets still loading, please wait."); else if (!checkPlayLimit()) alert(`Daily play limit (${maxPlaysPerDay}) reached!`); } }; restartButton.onclick = () => { if ((gameState === 'gameover' || gameState === 'win') && imagesLoaded) { init(); } }; window.removeEventListener('keydown', spacebarHandler); window.addEventListener('keydown', spacebarHandler); }
+         // Define spacebarHandler
+         const spacebarHandler = (e) => { if (!imagesLoaded) return; if (e.code === 'Space') { e.preventDefault(); if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } };
+
+         // Define screen update function
+         function initScreenUpdate() { if (!overlay || !startButton || !overlayText) return; const canPlay = checkPlayLimit(); const plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); const playsRemaining = maxPlaysPerDay - plays; let startText = ''; if (imagesLoaded) { startText = `Plays remaining today: ${canPlay ? playsRemaining : 0}`; if (!canPlay) { startText = `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`; } } else { startText = 'Loading Assets...'; } showOverlay('KyrosJump!', startText, (canPlay && imagesLoaded), false); if(startButton) { startButton.disabled = !imagesLoaded || !canPlay; if (!canPlay && imagesLoaded) { startButton.style.display = 'none'; } else { startButton.style.display = 'inline-block'; } } }
+
+         // Define main initialization function (with Restart fix)
+         function init() { console.log("Initializing start screen..."); gameState = 'start'; // Set state to start
+             // Ensure essential elements are found before proceeding
+             if (!canvas || !overlay || !startButton || !restartButton) {
+                 console.error("Crucial elements missing, cannot initialize.");
+                 alert("Initialization Error!");
+                 return;
+             }
+             hideOverlay(); initScreenUpdate(); // Update display for start state
+             const clickOrTapHandler = (e) => { if (imagesLoaded) { if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } if (e.type === 'touchstart') e.preventDefault(); }; canvas.removeEventListener('click', clickOrTapHandler); canvas.removeEventListener('touchstart', clickOrTapHandler); canvas.addEventListener('click', clickOrTapHandler); canvas.addEventListener('touchstart', clickOrTapHandler); startButton.onclick = () => { if (gameState === 'start' && imagesLoaded && checkPlayLimit()) { resetGame(); } else { if (!imagesLoaded) alert("Assets still loading, please wait."); else if (!checkPlayLimit()) alert(`Daily play limit (${maxPlaysPerDay}) reached!`); } }; restartButton.onclick = () => { if ((gameState === 'gameover' || gameState === 'win') && imagesLoaded) { init(); } }; window.removeEventListener('keydown', spacebarHandler); window.addEventListener('keydown', spacebarHandler); }
 
         // --- Sounds (Placeholder) ---
         const loseSound = null; const winSound = null; function playSound(soundElement) { if (soundElement?.play) { soundElement.currentTime = 0; soundElement.play().catch(e => console.warn("Sound play failed:", e)); } }
@@ -108,9 +155,13 @@
         function sendSpinResultToBackend(dataToSend) { /* ... (same) ... */ const formspreeEndpoint = 'https://formspree.io/f/xblgznvz'; fetch(formspreeEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(dataToSend) }).then(response => { if (response.ok) { console.log('Formspree submission successful.'); return response.json(); } else { response.json().then(data => { console.error('Formspree submission error:', response.statusText, data); }); } }).then(data => { if(data) console.log('Formspree success response:', data); }).catch(error => { console.error('Network error sending to Formspree:', error); }); }
 
         // --- Initial Start ---
-        init();
+        // Wrap the initial call in DOMContentLoaded
+        // (Moved the main logic inside the listener already)
+         init(); // Call init once DOM is ready and elements are selected
 
-    })(); // IIFE End
+    }); // END of DOMContentLoaded listener
+
+})(); // IIFE End
 </script>
 
 </body>
