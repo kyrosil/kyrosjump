@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>KyrosJump!</title>
+    <style>
+        body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f0f0; font-family: sans-serif; }
+        canvas { border: 1px solid #ccc; display: block; background-color: #87CEEB; /* Sky blue */ }
+        #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: rgba(0,0,0,0.5); color: white; text-align: center; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; font-size: 1.5em; z-index: 10; }
+        #gameOverlay.visible { visibility: visible; opacity: 1; }
+        #gameOverlay h2 { margin-bottom: 15px; }
+        #prizeCode { margin-top: 15px; padding: 10px; background-color: #fff; color: #e74c3c; font-weight: bold; border-radius: 5px; font-size: 1.1em; user-select: all; /* Allow copying */ }
+        #restartButton { margin-top: 20px; padding: 10px 20px; font-size: 0.8em; cursor: pointer; background-color: #3498db; border: none; color: white; border-radius: 5px; }
+        #startButton { padding: 15px 30px; font-size: 1em; cursor: pointer; background-color: #2ecc71; border: none; color: white; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="320" height="480"></canvas>
+
+    <div id="gameOverlay">
+        <h2 id="overlayTitle">KyrosJump!</h2>
+        <p id="overlayText">Click or Tap to Start</p>
+        <div id="prizeCodeContainer" style="display: none;">
+            Prize Code: <span id="prizeCode"></span>
+        </div>
+        <button id="restartButton" style="display: none;">Restart</button>
+        <button id="startButton">Start Game</button>
+    </div>
+
+<script>
+    // Self-invoking function to scope variables
+    (function() {
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('gameOverlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayText = document.getElementById('overlayText');
+        const prizeCodeContainer = document.getElementById('prizeCodeContainer');
+        const prizeCodeSpan = document.getElementById('prizeCode');
+        const restartButton = document.getElementById('restartButton');
+        const startButton = document.getElementById('startButton');
+
+        // --- Game Settings ---
+        const birdProps = { x: 50, y: 150, width: 20, height: 20, color: '#f39c12', gravity: 0.3, lift: -6, velocity: 0 };
+        const pipeProps = { width: 50, gap: 100, color: '#2ecc71', speed: 2, frequency: 90 }; // Lower frequency = more pipes
+        const targetScore = 20;
+        const minWinTimeSeconds = 30; // Anti-cheat: Minimum time to reach score 20
+
+        // --- Game State ---
+        let pipes = [];
+        let score = 0;
+        let frames = 0;
+        let gameState = 'start'; // start, playing, gameover, win
+        let startTime = null;
+
+        // --- Prize Codes (IMPORTANT: Visible in Source Code!) ---
+        const prizeCodes = [];
+        function generateRandomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = 'KYROSIL-';
+            for (let i = 0; i < 5; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); } return code;
+        }
+        // Generate 50 unique-ish codes
+        const generatedCodes = new Set();
+        while(generatedCodes.size < 50 && prizeCodes.length < 50) {
+            const newCode = generateRandomCode();
+            if (!generatedCodes.has(newCode)) {
+                generatedCodes.add(newCode);
+                prizeCodes.push(newCode);
+            }
+        }
+        // console.log(prizeCodes); // For debugging - shows codes in console! Remove for production.
+
+        // --- Game Functions ---
+        function resetGame() {
+            birdProps.y = 150;
+            birdProps.velocity = 0;
+            pipes = [];
+            score = 0;
+            frames = 0;
+            startTime = Date.now(); // Reset start time
+            gameState = 'playing';
+            hideOverlay();
+            loop(); // Start game loop
+        }
+
+        function birdJump() {
+            if (gameState === 'playing') {
+                birdProps.velocity = birdProps.lift;
+            }
+        }
+
+        function updatePipes() {
+            // Add new pipe pair
+            if (frames % pipeProps.frequency === 0) {
+                let pipeY = Math.floor(Math.random() * (canvas.height - pipeProps.gap - 100)) + 50; // Random gap position
+                pipes.push({ x: canvas.width, y: 0, height: pipeY, passed: false }); // Top pipe
+                pipes.push({ x: canvas.width, y: pipeY + pipeProps.gap, height: canvas.height - pipeY - pipeProps.gap, passed: false }); // Bottom pipe
+            }
+
+            // Move pipes left and remove off-screen pipes
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].x -= pipeProps.speed;
+                if (pipes[i].x + pipeProps.width < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+        }
+
+        function updateBird() {
+            birdProps.velocity += birdProps.gravity;
+            birdProps.y += birdProps.velocity;
+
+            // Prevent going off top/bottom (simple collision)
+            if (birdProps.y + birdProps.height > canvas.height) { // Hit ground
+                birdProps.y = canvas.height - birdProps.height;
+                birdProps.velocity = 0;
+                setGameOver();
+            }
+            if (birdProps.y < 0) { // Hit ceiling
+                birdProps.y = 0;
+                birdProps.velocity = 0;
+                // Optional: Game over on ceiling hit? setGameOver();
+            }
+        }
+
+        function checkCollisions() {
+            const bird = birdProps;
+            for (let i = 0; i < pipes.length; i++) {
+                const pipe = pipes[i];
+                // Basic rectangle collision detection
+                if (bird.x < pipe.x + pipeProps.width &&
+                    bird.x + bird.width > pipe.x &&
+                    bird.y < pipe.y + pipe.height &&
+                    bird.y + bird.height > pipe.y) {
+                    setGameOver();
+                    return;
+                }
+                // Check for passing pipe (score) - only check top pipes
+                 if (i % 2 === 0 && !pipe.passed && pipe.x + pipeProps.width < bird.x) {
+                    pipe.passed = true;
+                     // Mark the bottom pipe as passed too
+                     if (pipes[i+1]) pipes[i+1].passed = true;
+                     score++;
+                    // Check for win condition
+                    if (score === targetScore) {
+                        setWin();
+                        return; // Stop checking further collisions on win
+                    }
+                 }
+            }
+        }
+
+        function drawBird() {
+            ctx.fillStyle = birdProps.color;
+            ctx.fillRect(birdProps.x, birdProps.y, birdProps.width, birdProps.height);
+        }
+
+        function drawPipes() {
+            ctx.fillStyle = pipeProps.color;
+            pipes.forEach(pipe => {
+                ctx.fillRect(pipe.x, pipe.y, pipeProps.width, pipe.height);
+            });
+        }
+
+        function drawScore() {
+            ctx.fillStyle = '#000';
+            ctx.font = '20px Arial';
+            ctx.fillText('Score: ' + score, 10, 25);
+        }
+
+         // --- Anti-Cheat Check ---
+         function checkWinConditions() {
+             const endTime = Date.now();
+             const elapsedTimeSeconds = (endTime - startTime) / 1000;
+
+             // Check 1: Minimum time elapsed
+             if (elapsedTimeSeconds < minWinTimeSeconds) {
+                 console.warn(`Anti-Cheat Triggered: Game completed too fast (${elapsedTimeSeconds.toFixed(1)}s). Minimum required: ${minWinTimeSeconds}s.`);
+                 return false; // Win is invalid
+             }
+
+             // Add other checks here if needed (e.g., impossible score jumps - harder for flappy bird)
+
+             return true; // Win seems legitimate based on basic checks
+         }
+
+        // --- Overlay Functions ---
+        function showOverlay(title, text, showStart, showRestart, showPrize = false, code = '') {
+            overlayTitle.textContent = title;
+            overlayText.textContent = text;
+            startButton.style.display = showStart ? 'inline-block' : 'none';
+            restartButton.style.display = showRestart ? 'inline-block' : 'none';
+            if (showPrize && code) {
+                prizeCodeSpan.textContent = code;
+                prizeCodeContainer.style.display = 'block';
+            } else {
+                prizeCodeContainer.style.display = 'none';
+            }
+            overlay.classList.add('visible');
+        }
+        function hideOverlay() {
+            overlay.classList.remove('visible');
+        }
+
+        function setGameOver() {
+            if (gameState !== 'playing') return; // Prevent multiple game overs
+            console.log("Game Over");
+            gameState = 'gameover';
+            playSound(loseSound); // Use sound if available (need <audio> elements)
+            showOverlay('Game Over!', 'Score: ' + score, false, true);
+        }
+
+        function setWin() {
+             if (gameState !== 'playing') return; // Prevent multiple wins
+             gameState = 'win';
+             console.log("You Won!");
+
+             // ** Perform Anti-Cheat Check **
+             if (checkWinConditions()) {
+                 // Select and display prize code
+                 const selectedCode = prizeCodes[Math.floor(Math.random() * prizeCodes.length)];
+                 playSound(winSound); // Use sound if available
+                 showOverlay('🎉 Congratulations! 🎉', `You passed all ${targetScore} obstacles!`, false, true, true, selectedCode);
+
+                 // ** OPTIONAL: Send data to Formspree (if you add email/IG inputs) **
+                 // This still doesn't prevent cheating the win itself, only logs the claim
+                 /*
+                 const winData = {
+                     status: 'KyrosJump Win',
+                     prizeCodeDisplayed: selectedCode,
+                     winTimestamp: new Date().toISOString(),
+                     // Add email/IG if collected:
+                     // email: collectedEmail,
+                     // instagram: collectedInstagram
+                 };
+                 sendSpinResultToBackend(winData); // You'd need to adapt the Formspree function
+                 */
+
+             } else {
+                 // Anti-cheat failed
+                 setGameOver(); // Treat as game over if conditions not met
+                 overlayText.textContent = `Score: ${score}. Conditions not met.`; // Modify game over text
+             }
+        }
+
+        // --- Game Loop ---
+        function loop() {
+            if (gameState !== 'playing') return; // Stop loop if not playing
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update game elements
+            updateBird();
+            updatePipes();
+            checkCollisions(); // Check collisions AFTER updates
+
+            // Draw game elements
+            drawPipes();
+            drawBird();
+            drawScore();
+
+            frames++;
+            animationFrameId = requestAnimationFrame(loop); // Continue loop
+        }
+
+        // --- Initial Setup & Event Listeners ---
+        function init() {
+            showOverlay('KyrosJump!', 'Click or Tap to Start', true, false); // Initial screen
+
+            // Use click for desktop, touchend for mobile
+            canvas.addEventListener('click', birdJump);
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault(); // Prevent double jump on some devices
+                birdJump();
+            });
+            // Or just use mousedown for simplicity
+            // canvas.addEventListener('mousedown', birdJump);
+
+            startButton.onclick = () => {
+                 if (gameState === 'start') resetGame();
+            };
+            restartButton.onclick = () => {
+                 if (gameState === 'gameover' || gameState === 'win') resetGame();
+            };
+            // Optional: Spacebar jump
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    e.preventDefault(); // Prevent page scrolling
+                    birdJump();
+                     // Allow starting game with spacebar too
+                     if (gameState === 'start') resetGame();
+                }
+            });
+        }
+
+        // --- Sounds (Placeholder - requires <audio> tags in HTML) ---
+        // Define loseSound and winSound based on audio elements if you add them
+        const loseSound = null; // Example: document.getElementById('lose-sound');
+        const winSound = null; // Example: document.getElementById('win-sound');
+        // Add playSound function if needed
+
+        // --- Formspree function (Placeholder - adapt if needed) ---
+        function sendSpinResultToBackend(dataToSend) {
+            const formspreeEndpoint = 'https://formspree.io/f/xblgznvz'; // Your Formspree URL
+            fetch(formspreeEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(dataToSend) })
+                .then(response => { if (response.ok) console.log('Formspree submission successful.'); else console.error('Formspree submission error:', response.statusText);})
+                .catch(error => { console.error('Network error sending to Formspree:', error); });
+        }
+
+
+        // Start the setup
+        init();
+
+    })(); // End IIFE
+</script>
+
+</body>
+</html>
