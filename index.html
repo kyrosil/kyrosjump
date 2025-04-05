@@ -5,315 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>KyrosJump!</title>
     <style>
+        /* CSS unchanged */
         body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f0f0; font-family: sans-serif; }
-        canvas { border: 1px solid #ccc; display: block; background-color: #87CEEB; /* Sky blue */ }
-        #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: rgba(0,0,0,0.5); color: white; text-align: center; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; font-size: 1.5em; z-index: 10; }
+        canvas { border: 1px solid #ccc; display: block; background-color: #87CEEB; }
+        #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: rgba(0,0,0,0.6); color: white; text-align: center; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; font-size: 1.3em; z-index: 10; padding: 15px; box-sizing: border-box; }
         #gameOverlay.visible { visibility: visible; opacity: 1; }
-        #gameOverlay h2 { margin-bottom: 15px; }
-        #prizeCode { margin-top: 15px; padding: 10px; background-color: #fff; color: #e74c3c; font-weight: bold; border-radius: 5px; font-size: 1.1em; user-select: all; /* Allow copying */ }
-        #restartButton { margin-top: 20px; padding: 10px 20px; font-size: 0.8em; cursor: pointer; background-color: #3498db; border: none; color: white; border-radius: 5px; }
-        #startButton { padding: 15px 30px; font-size: 1em; cursor: pointer; background-color: #2ecc71; border: none; color: white; border-radius: 5px; }
+        #gameOverlay h2 { margin-bottom: 10px; font-size: 1.5em; }
+        #overlayText { margin-bottom: 15px; font-size: 0.9em; }
+        #prizeInfo { margin-top: 15px; font-weight: bold; color: #ffd700; font-size: 1.1em; }
+        #claimCodeContainer { margin-top: 10px; }
+        #claimCode { padding: 8px 12px; background-color: #fff; color: #e74c3c; font-weight: bold; border-radius: 5px; font-size: 1em; user-select: all; display: inline-block;}
+        #restartButton, #startButton { margin-top: 20px; padding: 12px 25px; font-size: 0.9em; cursor: pointer; border: none; color: white; border-radius: 5px; }
+        #startButton { background-color: #2ecc71;}
+        #restartButton { background-color: #3498db;}
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="320" height="480"></canvas>
+    <canvas id="gameCanvas" width="360" height="540"></canvas>
 
     <div id="gameOverlay">
         <h2 id="overlayTitle">KyrosJump!</h2>
-        <p id="overlayText">Click or Tap to Start</p>
-        <div id="prizeCodeContainer" style="display: none;">
-            Prize Code: <span id="prizeCode"></span>
+        <p id="overlayText">Loading Assets...</p>
+        <div id="prizeInfo" style="display: none;"></div>
+        <div id="claimCodeContainer" style="display: none;">
+            Your Claim Code: <span id="claimCode"></span>
+            <p style="font-size: 0.7em; margin-top: 8px;">(Send this code to claim your prize tier!)</p>
         </div>
         <button id="restartButton" style="display: none;">Restart</button>
-        <button id="startButton">Start Game</button>
-    </div>
+        <button id="startButton" disabled>Start Game</button> </div>
 
-<script>
-    // Self-invoking function to scope variables
-    (function() {
+    <img id="imgKyrosil" src="https://kyrosil.wordpress.com/wp-content/uploads/2025/04/cropped-adsiz_tasarim-removebg-preview-1.png?w=300" alt="Kyrosil Logo" style="display:none;">
+    <img id="imgYunan" src="YUNANDAN_GELSIN_LOGO_URL_BURAYA" alt="Yunandan Gelsin" style="display:none;"> <img id="imgEU" src="https://th.bing.com/th/id/OIP.va7Akw5aa2xy5MfY8chgFwHaE8?w=306&h=204&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" alt="EU Logo" style="display:none;"> <img id="imgNATO" src="https://th.bing.com/th/id/OIP.ZckvoU6nT56TJO0XQSMDdgAAAA?w=198&h=180&c=7&r=0&o=5&pid=1.7" alt="NATO Logo" style="display:none;"> <script>
+    (function() { // IIFE Start
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('gameOverlay');
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayText = document.getElementById('overlayText');
-        const prizeCodeContainer = document.getElementById('prizeCodeContainer');
-        const prizeCodeSpan = document.getElementById('prizeCode');
+        const prizeInfoSpan = document.getElementById('prizeInfo');
+        const claimCodeContainer = document.getElementById('claimCodeContainer');
+        const claimCodeSpan = document.getElementById('claimCode');
         const restartButton = document.getElementById('restartButton');
         const startButton = document.getElementById('startButton');
 
-        // --- Game Settings ---
-        const birdProps = { x: 50, y: 150, width: 20, height: 20, color: '#f39c12', gravity: 0.3, lift: -6, velocity: 0 };
-        const pipeProps = { width: 50, gap: 100, color: '#2ecc71', speed: 2, frequency: 90 }; // Lower frequency = more pipes
-        const targetScore = 20;
-        const minWinTimeSeconds = 30; // Anti-cheat: Minimum time to reach score 20
+        // Image References
+        const imgKyrosil = document.getElementById('imgKyrosil');
+        const imgYunan = document.getElementById('imgYunan');
+        const imgEU = document.getElementById('imgEU');
+        const imgNATO = document.getElementById('imgNATO');
+        let imagesLoaded = false;
+        let loadedCount = 0;
+        const totalImages = 4;
 
-        // --- Game State ---
-        let pipes = [];
-        let score = 0;
-        let frames = 0;
-        let gameState = 'start'; // start, playing, gameover, win
-        let startTime = null;
-
-        // --- Prize Codes (IMPORTANT: Visible in Source Code!) ---
-        const prizeCodes = [];
-        function generateRandomCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = 'KYROSIL-';
-            for (let i = 0; i < 5; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); } return code;
-        }
-        // Generate 50 unique-ish codes
-        const generatedCodes = new Set();
-        while(generatedCodes.size < 50 && prizeCodes.length < 50) {
-            const newCode = generateRandomCode();
-            if (!generatedCodes.has(newCode)) {
-                generatedCodes.add(newCode);
-                prizeCodes.push(newCode);
+        // Image Preloading Logic (Unchanged)
+        function checkAllImagesLoaded() {
+            loadedCount++;
+            if (loadedCount >= totalImages) { // Use >= to handle potential errors counting as loaded
+                console.log("Asset loading complete (or failed).");
+                imagesLoaded = true;
+                 if(startButton) startButton.disabled = false; // Enable button
+                 if(overlayText && gameState === 'start') overlayText.textContent = 'Click or Tap to Start'; // Update text if still on start screen
             }
         }
-        // console.log(prizeCodes); // For debugging - shows codes in console! Remove for production.
-
-        // --- Game Functions ---
-        function resetGame() {
-            birdProps.y = 150;
-            birdProps.velocity = 0;
-            pipes = [];
-            score = 0;
-            frames = 0;
-            startTime = Date.now(); // Reset start time
-            gameState = 'playing';
-            hideOverlay();
-            loop(); // Start game loop
-        }
-
-        function birdJump() {
-            if (gameState === 'playing') {
-                birdProps.velocity = birdProps.lift;
-            }
-        }
-
-        function updatePipes() {
-            // Add new pipe pair
-            if (frames % pipeProps.frequency === 0) {
-                let pipeY = Math.floor(Math.random() * (canvas.height - pipeProps.gap - 100)) + 50; // Random gap position
-                pipes.push({ x: canvas.width, y: 0, height: pipeY, passed: false }); // Top pipe
-                pipes.push({ x: canvas.width, y: pipeY + pipeProps.gap, height: canvas.height - pipeY - pipeProps.gap, passed: false }); // Bottom pipe
-            }
-
-            // Move pipes left and remove off-screen pipes
-            for (let i = pipes.length - 1; i >= 0; i--) {
-                pipes[i].x -= pipeProps.speed;
-                if (pipes[i].x + pipeProps.width < 0) {
-                    pipes.splice(i, 1);
-                }
-            }
-        }
-
-        function updateBird() {
-            birdProps.velocity += birdProps.gravity;
-            birdProps.y += birdProps.velocity;
-
-            // Prevent going off top/bottom (simple collision)
-            if (birdProps.y + birdProps.height > canvas.height) { // Hit ground
-                birdProps.y = canvas.height - birdProps.height;
-                birdProps.velocity = 0;
-                setGameOver();
-            }
-            if (birdProps.y < 0) { // Hit ceiling
-                birdProps.y = 0;
-                birdProps.velocity = 0;
-                // Optional: Game over on ceiling hit? setGameOver();
-            }
-        }
-
-        function checkCollisions() {
-            const bird = birdProps;
-            for (let i = 0; i < pipes.length; i++) {
-                const pipe = pipes[i];
-                // Basic rectangle collision detection
-                if (bird.x < pipe.x + pipeProps.width &&
-                    bird.x + bird.width > pipe.x &&
-                    bird.y < pipe.y + pipe.height &&
-                    bird.y + bird.height > pipe.y) {
-                    setGameOver();
-                    return;
-                }
-                // Check for passing pipe (score) - only check top pipes
-                 if (i % 2 === 0 && !pipe.passed && pipe.x + pipeProps.width < bird.x) {
-                    pipe.passed = true;
-                     // Mark the bottom pipe as passed too
-                     if (pipes[i+1]) pipes[i+1].passed = true;
-                     score++;
-                    // Check for win condition
-                    if (score === targetScore) {
-                        setWin();
-                        return; // Stop checking further collisions on win
-                    }
-                 }
-            }
-        }
-
-        function drawBird() {
-            ctx.fillStyle = birdProps.color;
-            ctx.fillRect(birdProps.x, birdProps.y, birdProps.width, birdProps.height);
-        }
-
-        function drawPipes() {
-            ctx.fillStyle = pipeProps.color;
-            pipes.forEach(pipe => {
-                ctx.fillRect(pipe.x, pipe.y, pipeProps.width, pipe.height);
-            });
-        }
-
-        function drawScore() {
-            ctx.fillStyle = '#000';
-            ctx.font = '20px Arial';
-            ctx.fillText('Score: ' + score, 10, 25);
-        }
-
-         // --- Anti-Cheat Check ---
-         function checkWinConditions() {
-             const endTime = Date.now();
-             const elapsedTimeSeconds = (endTime - startTime) / 1000;
-
-             // Check 1: Minimum time elapsed
-             if (elapsedTimeSeconds < minWinTimeSeconds) {
-                 console.warn(`Anti-Cheat Triggered: Game completed too fast (${elapsedTimeSeconds.toFixed(1)}s). Minimum required: ${minWinTimeSeconds}s.`);
-                 return false; // Win is invalid
+        [imgKyrosil, imgYunan, imgEU, imgNATO].forEach(img => {
+             if (!img) { console.error("An image element is missing!"); loadedCount++; return; }
+             if (img.complete && img.naturalHeight !== 0) { checkAllImagesLoaded(); }
+             else {
+                 img.onload = checkAllImagesLoaded;
+                 img.onerror = () => { console.error(`Failed to load image: ${img.id} (${img.src})`); checkAllImagesLoaded(); };
+                 if (!img.src || img.src.includes('PLACEHOLDER') || img.src.includes('_URL_BURAYA')) { console.warn(`Image ${img.id} has a placeholder URL.`); }
              }
-
-             // Add other checks here if needed (e.g., impossible score jumps - harder for flappy bird)
-
-             return true; // Win seems legitimate based on basic checks
-         }
-
-        // --- Overlay Functions ---
-        function showOverlay(title, text, showStart, showRestart, showPrize = false, code = '') {
-            overlayTitle.textContent = title;
-            overlayText.textContent = text;
-            startButton.style.display = showStart ? 'inline-block' : 'none';
-            restartButton.style.display = showRestart ? 'inline-block' : 'none';
-            if (showPrize && code) {
-                prizeCodeSpan.textContent = code;
-                prizeCodeContainer.style.display = 'block';
-            } else {
-                prizeCodeContainer.style.display = 'none';
-            }
-            overlay.classList.add('visible');
-        }
-        function hideOverlay() {
-            overlay.classList.remove('visible');
-        }
-
-        function setGameOver() {
-            if (gameState !== 'playing') return; // Prevent multiple game overs
-            console.log("Game Over");
-            gameState = 'gameover';
-            playSound(loseSound); // Use sound if available (need <audio> elements)
-            showOverlay('Game Over!', 'Score: ' + score, false, true);
-        }
-
-        function setWin() {
-             if (gameState !== 'playing') return; // Prevent multiple wins
-             gameState = 'win';
-             console.log("You Won!");
-
-             // ** Perform Anti-Cheat Check **
-             if (checkWinConditions()) {
-                 // Select and display prize code
-                 const selectedCode = prizeCodes[Math.floor(Math.random() * prizeCodes.length)];
-                 playSound(winSound); // Use sound if available
-                 showOverlay('🎉 Congratulations! 🎉', `You passed all ${targetScore} obstacles!`, false, true, true, selectedCode);
-
-                 // ** OPTIONAL: Send data to Formspree (if you add email/IG inputs) **
-                 // This still doesn't prevent cheating the win itself, only logs the claim
-                 /*
-                 const winData = {
-                     status: 'KyrosJump Win',
-                     prizeCodeDisplayed: selectedCode,
-                     winTimestamp: new Date().toISOString(),
-                     // Add email/IG if collected:
-                     // email: collectedEmail,
-                     // instagram: collectedInstagram
-                 };
-                 sendSpinResultToBackend(winData); // You'd need to adapt the Formspree function
-                 */
-
-             } else {
-                 // Anti-cheat failed
-                 setGameOver(); // Treat as game over if conditions not met
-                 overlayText.textContent = `Score: ${score}. Conditions not met.`; // Modify game over text
-             }
-        }
-
-        // --- Game Loop ---
-        function loop() {
-            if (gameState !== 'playing') return; // Stop loop if not playing
-
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Update game elements
-            updateBird();
-            updatePipes();
-            checkCollisions(); // Check collisions AFTER updates
-
-            // Draw game elements
-            drawPipes();
-            drawBird();
-            drawScore();
-
-            frames++;
-            animationFrameId = requestAnimationFrame(loop); // Continue loop
-        }
-
-        // --- Initial Setup & Event Listeners ---
-        function init() {
-            showOverlay('KyrosJump!', 'Click or Tap to Start', true, false); // Initial screen
-
-            // Use click for desktop, touchend for mobile
-            canvas.addEventListener('click', birdJump);
-            canvas.addEventListener('touchend', (e) => {
-                e.preventDefault(); // Prevent double jump on some devices
-                birdJump();
-            });
-            // Or just use mousedown for simplicity
-            // canvas.addEventListener('mousedown', birdJump);
-
-            startButton.onclick = () => {
-                 if (gameState === 'start') resetGame();
-            };
-            restartButton.onclick = () => {
-                 if (gameState === 'gameover' || gameState === 'win') resetGame();
-            };
-            // Optional: Spacebar jump
-            window.addEventListener('keydown', (e) => {
-                if (e.code === 'Space') {
-                    e.preventDefault(); // Prevent page scrolling
-                    birdJump();
-                     // Allow starting game with spacebar too
-                     if (gameState === 'start') resetGame();
-                }
-            });
-        }
-
-        // --- Sounds (Placeholder - requires <audio> tags in HTML) ---
-        // Define loseSound and winSound based on audio elements if you add them
-        const loseSound = null; // Example: document.getElementById('lose-sound');
-        const winSound = null; // Example: document.getElementById('win-sound');
-        // Add playSound function if needed
-
-        // --- Formspree function (Placeholder - adapt if needed) ---
-        function sendSpinResultToBackend(dataToSend) {
-            const formspreeEndpoint = 'https://formspree.io/f/xblgznvz'; // Your Formspree URL
-            fetch(formspreeEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(dataToSend) })
-                .then(response => { if (response.ok) console.log('Formspree submission successful.'); else console.error('Formspree submission error:', response.statusText);})
-                .catch(error => { console.error('Network error sending to Formspree:', error); });
-        }
+        });
 
 
-        // Start the setup
+        // --- Game Settings --- (Unchanged)
+        const birdProps = { x: 60, y: 150, width: 35, height: 35, gravity: 0.35, lift: -7, velocity: 0 };
+        const pipeProps = { width: 60, gap: 120, color: '#006400', speed: 2.5, frequency: 80 };
+        const collectibleProps = { size: 25, score: 5 };
+        const targetObstacles = 20;
+        const maxCollectibles = 6;
+        const minWinTimeSeconds = 45;
+
+        // --- Game State --- (Unchanged)
+        let pipes = []; let collectibles = []; let obstacleScore = 0; let collectibleScore = 0;
+        let frames = 0; let gameState = 'start'; let startTime = null; let animationFrameId = null;
+
+        // --- Play Limit --- (Unchanged)
+        const playLimitKey = 'kyrosJumpPlays'; const lastPlayDateKey = 'kyrosJumpLastPlayDate'; const maxPlaysPerDay = 5;
+        function checkPlayLimit() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); if (lastPlayDate !== today) { plays = 0; localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '0'); } if (plays >= maxPlaysPerDay) { console.log("Daily play limit reached."); return false; } return true; }
+        function incrementPlayCount() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); if (lastPlayDate !== today) { localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '1'); } else { let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); plays++; localStorage.setItem(playLimitKey, plays.toString()); console.log(`Play count: ${plays}/${maxPlaysPerDay}`); } }
+
+        // --- Game Functions --- (Drawing, Update, Collision, etc. Unchanged)
+         function resetGame() { if (!imagesLoaded) return; if (!checkPlayLimit()) { showOverlay('Limit Reached!', `You can play ${maxPlaysPerDay} times per day. Try again tomorrow!`, false, false); return; } birdProps.y = 150; birdProps.velocity = 0; pipes = []; collectibles = []; obstacleScore = 0; collectibleScore = 0; frames = 0; startTime = Date.now(); gameState = 'playing'; hideOverlay(); if (animationFrameId) cancelAnimationFrame(animationFrameId); loop(); }
+         function birdJump() { if (gameState === 'playing') birdProps.velocity = birdProps.lift; }
+         function updatePipesAndCollectibles() { if (frames % pipeProps.frequency === 0) { let pipeY = Math.floor(Math.random() * (canvas.height - pipeProps.gap - 150)) + 75; pipes.push({ x: canvas.width, y: 0, height: pipeY, passed: false }); pipes.push({ x: canvas.width, y: pipeY + pipeProps.gap, height: canvas.height - pipeY - pipeProps.gap, passed: false }); if (collectibles.filter(c => !c.collected && !c.offscreen).length < maxCollectibles * 2) { if (Math.random() < 0.6) { const collectibleType = Math.random() < 0.5 ? 'EU' : 'NATO'; const collectibleImg = collectibleType === 'EU' ? imgEU : imgNATO; const collectibleY = pipeY + (pipeProps.gap / 2) - (collectibleProps.size / 2) + (Math.random() * 40 - 20); const collectibleX = canvas.width + pipeProps.width / 2 + 20; let tooClose = collectibles.some(c => Math.abs(c.x - collectibleX) < 80); if (!tooClose && collectibleImg && collectibleImg.complete && collectibleImg.naturalHeight !== 0) { collectibles.push({ x: collectibleX, y: collectibleY, type: collectibleType, img: collectibleImg, collected: false, offscreen: false }); } } } } for (let i = pipes.length - 1; i >= 0; i--) { pipes[i].x -= pipeProps.speed; if (pipes[i].x + pipeProps.width < 0) { pipes.splice(i, 1); } } for (let i = collectibles.length - 1; i >= 0; i--) { collectibles[i].x -= pipeProps.speed; if (collectibles[i].x + collectibleProps.size < 0) { collectibles[i].offscreen = true; } } }
+         function updateBird() { birdProps.velocity += birdProps.gravity; birdProps.y += birdProps.velocity; if (birdProps.y + birdProps.height > canvas.height) { birdProps.y = canvas.height - birdProps.height; birdProps.velocity = 0; setGameOver(); } if (birdProps.y < 0) { birdProps.y = 0; birdProps.velocity = 0; } }
+         function checkCollisions() { const bird = birdProps; for (const pipe of pipes) { if (bird.x < pipe.x + pipeProps.width && bird.x + bird.width > pipe.x && bird.y < pipe.y + pipe.height && bird.y + bird.height > pipe.y) { setGameOver(); return; } } for (const item of collectibles) { if (!item.collected && !item.offscreen && bird.x < item.x + collectibleProps.size && bird.x + bird.width > item.x && bird.y < item.y + collectibleProps.size && bird.y + bird.height > item.y) { item.collected = true; collectibleScore += collectibleProps.score; console.log("Collected:", item.type, "New Score:", collectibleScore); } } for (let i = 0; i < pipes.length; i += 2) { const topPipe = pipes[i]; if (!topPipe.passed && topPipe.x + pipeProps.width < bird.x) { topPipe.passed = true; if(pipes[i+1]) pipes[i+1].passed = true; obstacleScore++; console.log("Passed Obstacle:", obstacleScore); if (obstacleScore === targetObstacles) { setWin(); return; } } } }
+         function drawBird() { if (imgKyrosil && imgKyrosil.complete && imgKyrosil.naturalHeight !== 0) { let angle = birdProps.velocity / 10; angle = Math.max(-Math.PI / 6, Math.min(Math.PI / 4, angle)); ctx.save(); ctx.translate(birdProps.x + birdProps.width / 2, birdProps.y + birdProps.height / 2); ctx.rotate(angle); ctx.drawImage(imgKyrosil, -birdProps.width / 2, -birdProps.height / 2, birdProps.width, birdProps.height); ctx.restore(); } else { ctx.fillStyle = birdProps.color; ctx.fillRect(birdProps.x, birdProps.y, birdProps.width, birdProps.height); } }
+         function drawPipes() { ctx.fillStyle = pipeProps.color; pipes.forEach(pipe => { ctx.fillRect(pipe.x, pipe.y, pipeProps.width, pipe.height); }); }
+         function drawCollectibles() { collectibles.forEach(item => { if (!item.collected && !item.offscreen && item.img && item.img.complete && item.img.naturalHeight !==0) { ctx.drawImage(item.img, item.x, item.y, collectibleProps.size, collectibleProps.size); } }); }
+         function drawBackground() { if (imgYunan && imgYunan.complete && imgYunan.naturalHeight !== 0) { ctx.globalAlpha = 0.08; const logoWidth = imgYunan.width * 0.4; const logoHeight = imgYunan.height * 0.4; ctx.drawImage(imgYunan, centerX - logoWidth/2, centerY - logoHeight/2, logoWidth, logoHeight); ctx.globalAlpha = 1.0; } }
+         function drawScore() { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth= 0.5; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; const obsText = `Obstacles: ${obstacleScore}/${targetObstacles}`; const bonusText = `Bonus: ${collectibleScore}`; ctx.strokeText(obsText, 10, 10); ctx.fillText(obsText, 10, 10); ctx.strokeText(bonusText, 10, 35); ctx.fillText(bonusText, 10, 35); }
+         function checkWinConditions() { const endTime = Date.now(); const elapsedTimeSeconds = (endTime - startTime) / 1000; if (elapsedTimeSeconds < minWinTimeSeconds) { console.warn(`Anti-Cheat: Time (${elapsedTimeSeconds.toFixed(1)}s) < Min (${minWinTimeSeconds}s).`); return false; } return true; }
+         function showOverlay(title, text, showStart, showRestart, prizeTierText = '', claimCode = '') { overlayTitle.textContent = title; overlayText.textContent = text; startButton.style.display = showStart ? 'inline-block' : 'none'; restartButton.style.display = showRestart ? 'inline-block' : 'none'; if (prizeTierText) { prizeInfoSpan.textContent = prizeTierText; prizeInfoSpan.style.display = 'block'; } else { prizeInfoSpan.style.display = 'none'; } if (claimCode) { claimCodeSpan.textContent = claimCode; claimCodeContainer.style.display = 'block'; } else { claimCodeContainer.style.display = 'none'; } overlay.classList.add('visible'); }
+         function hideOverlay() { overlay.classList.remove('visible'); }
+         function setGameOver() { if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over"); gameState = 'gameover'; playSound(loseSound); cancelAnimationFrame(animationFrameId); incrementPlayCount(); showOverlay('Game Over!', `Obstacles: ${obstacleScore} | Bonus: ${collectibleScore}`, false, true); }
+         function generateClaimCode(scoreTier) { const timestamp = Date.now().toString().slice(-5); const randomChars = Math.random().toString(36).substring(2, 5).toUpperCase(); return `KYJMP-${scoreTier}-${randomChars}${timestamp}`; }
+         function setWin() { if (gameState === 'win' || gameState === 'gameover') return; console.log("Target obstacles reached!"); if (checkWinConditions()) { gameState = 'win'; playSound(winSound); cancelAnimationFrame(animationFrameId); incrementPlayCount(); const totalScore = 20 + collectibleScore; let prizeTierText = ''; let prizeTierLevel = 0; let claimCode = ''; if (totalScore >= 50) { prizeTierText = "You reached the 1000 TL Voucher Tier!"; prizeTierLevel = 50; } else if (totalScore >= 40) { prizeTierText = "You reached the 500 TL Voucher Tier!"; prizeTierLevel = 40; } else if (totalScore >= 30) { prizeTierText = "You reached the 300 TL Voucher Tier!"; prizeTierLevel = 30; } else { prizeTierText = "You reached the 150 TL Voucher Tier!"; prizeTierLevel = 20; } claimCode = generateClaimCode(prizeTierLevel); showOverlay('🎉 Congratulations! 🎉', `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`, false, true, prizeTierText, claimCode); const winData = { status: 'KyrosJump Win', finalScore: totalScore, obstacleScore: obstacleScore, bonusScore: collectibleScore, prizeTier: prizeTierLevel, claimCode: claimCode, winTimestamp: new Date().toISOString(), /* Add email/IG if collected */ }; sendSpinResultToBackend(winData); } else { console.log("Win condition met, but anti-cheat check failed."); setGameOver(); overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Conditions not met.`; } }
+         function loop(timestamp) { if (gameState !== 'playing') return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawBackground(); updatePipesAndCollectibles(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
+         function init() { const playsRemaining = maxPlaysPerDay - parseInt(localStorage.getItem(playLimitKey) || '0', 10); const canPlay = checkPlayLimit(); if (!imagesLoaded) { showOverlay('KyrosJump!', 'Loading Assets...', false, false); } else { showOverlay('KyrosJump!', `Plays remaining today: ${canPlay ? playsRemaining : 0}`, canPlay, false); if (!canPlay) { startButton.style.display = 'none'; overlayText.textContent = `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`; } } const clickOrTapHandler = (e) => { if (imagesLoaded) { if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else { birdJump(); } } if (e.type === 'touchstart') e.preventDefault(); }; canvas.addEventListener('click', clickOrTapHandler); canvas.addEventListener('touchstart', clickOrTapHandler); startButton.onclick = () => { if (gameState === 'start' && imagesLoaded && checkPlayLimit()) resetGame(); }; restartButton.onclick = () => { if ((gameState === 'gameover' || gameState === 'win') && imagesLoaded) init(); }; window.addEventListener('keydown', (e) => { if (!imagesLoaded) return; if (e.code === 'Space') { e.preventDefault(); if (gameState === 'start' && checkPlayLimit()) resetGame(); else birdJump(); } }); }
+        const loseSound = null; const winSound = null; // Sounds placeholders
+        function sendSpinResultToBackend(dataToSend) { /* ... (same Formspree function) ... */ const formspreeEndpoint = 'https://formspree.io/f/xblgznvz'; fetch(formspreeEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(dataToSend) }).then(response => { if (response.ok) { console.log('Formspree submission successful.'); return response.json(); } else { response.json().then(data => { console.error('Formspree submission error:', response.statusText, data); }); } }).then(data => { if(data) console.log('Formspree success response:', data); }).catch(error => { console.error('Network error sending to Formspree:', error); }); }
+
+        // Start Initialization
         init();
 
-    })(); // End IIFE
+    })(); // IIFE End
 </script>
 
 </body>
