@@ -1,0 +1,92 @@
+
+body {
+  margin: 0;
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(to bottom, #a8e063, #56ab2f);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#game-container {
+  width: 360px;
+  max-height: 640px;
+  background: #ffffffcc;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#header {
+  text-align: center;
+  padding: 10px 0;
+}
+
+#header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #2e7d32;
+}
+
+#header p {
+  margin: 5px 0 15px;
+  font-size: 14px;
+  color: #4caf50;
+}
+
+canvas {
+  display: block;
+  margin: 0 auto;
+  background: url('../assets/images/background.png') no-repeat center center;
+  background-size: cover;
+  border: 2px solid #4caf50;
+  border-radius: 10px;
+}
+
+#scoreboard {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 16px;
+  color: #1b5e20;
+}
+
+#reward-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  border: 2px solid #4caf50;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  z-index: 10;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+#reward-message.hidden {
+  display: none;
+}
+
+#reward-message h2 {
+  color: #2e7d32;
+  margin-bottom: 10px;
+}
+
+#reward-message button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#reward-message button:hover {
+  background-color: #388e3c;
+}
