@@ -47,9 +47,9 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOM Loaded. Initializing KyrosJump (v_NoImageWait)...");
+        console.log("DOM Loaded. Initializing KyrosJump (v_FixUpdatePipes)...");
 
-        // --- Elements ---
+        // --- Essential Elements ---
         const canvas = document.getElementById('gameCanvas');
         if (!canvas || typeof canvas.getContext !== 'function') { console.error("FATAL: Canvas not found!"); return; }
         const ctx = canvas.getContext('2d');
@@ -57,77 +57,88 @@
         const startButton = document.getElementById('startButton');
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayText = document.getElementById('overlayText');
-        const prizeInfoSpan = document.getElementById('prizeInfo');
         const randomCodeContainer = document.getElementById('randomCodeContainer');
         const randomCodeSpan = document.getElementById('randomCode');
         const restartButton = document.getElementById('restartButton');
-        // Image elements are no longer needed by JS
-
-        // Check essential elements
-        if (!overlay || !overlayTitle || !overlayText || !prizeInfoSpan || !randomCodeContainer || !randomCodeSpan || !restartButton || !startButton) {
-             console.error("FATAL: One or more essential HTML elements missing!"); alert("Essential elements missing."); return;
-        }
-        console.log("All essential elements found.");
-
-        // --- Image Preloading REMOVED ---
-        let imagesLoaded = true; // FORCE TRUE - Don't wait for images
-        console.log("Image loading bypassed.");
+        // Image elements are not needed by JS in this version
+        console.log("Essential elements checked.");
 
         // --- Game Settings ---
-        const birdProps = { x: 60, y: 150, width: 40, height: 40, gravity: 0.35, lift: -7, velocity: 0, color: 'orange' }; // Size 40x40
+        const birdProps = { x: 60, y: 150, width: 35, height: 35, color: 'orange', gravity: 0.35, lift: -7, velocity: 0 };
         const pipeProps = { width: 60, gap: 120, color: '#006400', speed: 2.5, frequency: 85 };
-        const collectibleProps = { size: 25, score: 5, colorEU: '#003399', colorNATO: '#4A4A4A' }; // Added colors for fallbacks
-        const targetObstacles = 20; const minWinTimeSeconds = 30; const maxCollectiblesToSpawn = 6; const collectibleSpawnObstacles = [2, 5, 8, 11, 14, 17]; let spawnedCollectiblesCount = 0;
-        let pipes = []; let collectibles = []; let obstacleScore = 0; let collectibleScore = 0; let frames = 0; let gameState = 'loading'; let startTime = null; let animationFrameId = null;
-        const playLimitKey = 'kyrosJumpPlays_vNoImage'; const lastPlayDateKey = 'kyrosJumpLastPlayDate_vNI'; const maxPlaysPerDay = 5;
+        // Collectibles REMOVED from this version
+        const targetObstacles = 20;
+        const minWinTimeSeconds = 25;
+        let pipes = [];
+        let obstacleScore = 0;
+        let frames = 0; let gameState = 'loading'; let startTime = null; let animationFrameId = null;
+        const playLimitKey = 'kyrosJumpPlays_vSimpleFix'; const lastPlayDateKey = 'kyrosJumpLastPlayDate_vSF'; const maxPlaysPerDay = 5;
 
-        // --- Generate Codes ---
-        function generateTierCode(scoreTierLevel) { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let randomPart = ''; for (let i = 0; i < 4; i++) { randomPart += chars.charAt(Math.floor(Math.random() * chars.length)); } return `KYRJP-${scoreTierLevel}-${randomPart}`; }
+        // --- Prize Codes ---
+        function generateRandomKyrosilCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = 'KYROSIL-'; for (let i = 0; i < 5; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); } return code; }
+        const prizeCodes = new Set(); while (prizeCodes.size < 100) { prizeCodes.add(generateRandomKyrosilCode()); }
+        const prizeCodeArray = Array.from(prizeCodes);
 
         // --- Game Functions ---
          function checkPlayLimit() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); if (lastPlayDate !== today) { plays = 0; localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '0'); } if (plays >= maxPlaysPerDay) { return false; } return true; }
          function incrementPlayCount() { const today = new Date().toDateString(); const lastPlayDate = localStorage.getItem(lastPlayDateKey); if (lastPlayDate !== today) { localStorage.setItem(lastPlayDateKey, today); localStorage.setItem(playLimitKey, '1'); } else { let plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10); plays++; localStorage.setItem(playLimitKey, plays.toString()); console.log(`Play count: ${plays}/${maxPlaysPerDay}`); } }
+
+         // CORRECTED updatePipes function definition
+         function updatePipes() {
+             if (frames % pipeProps.frequency === 0) {
+                 let pipeY = Math.floor(Math.random() * (canvas.height - pipeProps.gap - 150)) + 75;
+                 pipes.push({ x: canvas.width, y: 0, height: pipeY, passed: false });
+                 pipes.push({ x: canvas.width, y: pipeY + pipeProps.gap, height: canvas.height - pipeY - pipeProps.gap, passed: false });
+             }
+             for (let i = pipes.length - 1; i >= 0; i--) {
+                 pipes[i].x -= pipeProps.speed;
+                 if (pipes[i].x + pipeProps.width < 0) {
+                     pipes.splice(i, 1);
+                 }
+             }
+         }
+
          function resetGame() {
-             console.log(">>> resetGame entered");
-             // imagesLoaded check removed
+             console.log(">>> resetGame entered (Simple)");
              if (!checkPlayLimit()) { showOverlay('Limit Reached!', `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`, false, false); return; }
-             birdProps.y = 150; birdProps.velocity = 0; pipes = []; collectibles = []; obstacleScore = 0; collectibleScore = 0; frames = 0; startTime = Date.now(); spawnedCollectiblesCount = 0;
-             gameState = 'playing'; hideOverlay(); if (animationFrameId) cancelAnimationFrame(animationFrameId); loop();
+             birdProps.y = 150; birdProps.velocity = 0; pipes = []; obstacleScore = 0; frames = 0; startTime = Date.now();
+             gameState = 'playing';
+             hideOverlay();
+             if (animationFrameId) cancelAnimationFrame(animationFrameId);
+             console.log("Starting game loop (Simple)...");
+             loop();
          }
          function birdJump() { if (gameState === 'playing') birdProps.velocity = birdProps.lift; }
-         // Update pipes and spawn placeholder collectibles
-         function updatePipesAndCollectibles() { if (frames % pipeProps.frequency === 0) { let pipeY = Math.floor(Math.random() * (canvas.height - pipeProps.gap - 150)) + 75; pipes.push({ x: canvas.width, y: 0, height: pipeY, passed: false }); pipes.push({ x: canvas.width, y: pipeY + pipeProps.gap, height: canvas.height - pipeY - pipeProps.gap, passed: false }); if (collectibleSpawnObstacles.includes(obstacleScore) && spawnedCollectiblesCount < maxCollectiblesToSpawn) { const collectibleType = Math.random() < 0.5 ? 'EU' : 'NATO'; const collectibleY = pipeY + (pipeProps.gap / 2) - (collectibleProps.size / 2) + (Math.random() * 40 - 20); const collectibleX = canvas.width + pipeProps.width;
-             // Add placeholder collectible data (no image reference needed)
-             collectibles.push({ x: collectibleX, y: collectibleY, type: collectibleType, /* img removed */ collected: false, offscreen: false }); spawnedCollectiblesCount++; } } for (let i = pipes.length - 1; i >= 0; i--) { pipes[i].x -= pipeProps.speed; if (pipes[i].x + pipeProps.width < 0) pipes.splice(i, 1); } for (let i = collectibles.length - 1; i >= 0; i--) { collectibles[i].x -= pipeProps.speed; if (collectibles[i].x + collectibleProps.size < 0) collectibles[i].offscreen = true; } }
-         function updateBird() { /* Same */ birdProps.velocity += birdProps.gravity; birdProps.y += birdProps.velocity; if (birdProps.y + birdProps.height > canvas.height) { birdProps.y = canvas.height - birdProps.height; birdProps.velocity = 0; setGameOver(); } if (birdProps.y < 0) { birdProps.y = 0; birdProps.velocity = 0; } }
-         function checkCollisions() { /* Same */ const bird = birdProps; for (const pipe of pipes) { if (bird.x < pipe.x + pipeProps.width && bird.x + bird.width > pipe.x && bird.y < pipe.y + pipe.height && bird.y + bird.height > pipe.y) { setGameOver(); return; } } for (const item of collectibles) { if (!item.collected && !item.offscreen && bird.x < item.x + collectibleProps.size && bird.x + bird.width > item.x && bird.y < item.y + collectibleProps.size && bird.y + bird.height > item.y) { item.collected = true; collectibleScore += collectibleProps.score; } } for (let i = 0; i < pipes.length; i += 2) { const topPipe = pipes[i]; if (!topPipe.passed && topPipe.x + pipeProps.width < bird.x) { topPipe.passed = true; if(pipes[i+1]) pipes[i+1].passed = true; obstacleScore++; if (obstacleScore >= targetObstacles) { setWin(); return; } } } }
-         // drawBird ALWAYS draws fallback square
+         function updateBird() { birdProps.velocity += birdProps.gravity; birdProps.y += birdProps.velocity; if (birdProps.y + birdProps.height > canvas.height) { birdProps.y = canvas.height - birdProps.height; birdProps.velocity = 0; setGameOver(); } if (birdProps.y < 0) { birdProps.y = 0; birdProps.velocity = 0; } }
+         // Simplified collision - No Collectibles
+         function checkCollisions() { const bird = birdProps; for (const pipe of pipes) { if (bird.x < pipe.x + pipeProps.width && bird.x + bird.width > pipe.x && bird.y < pipe.y + pipe.height && bird.y + bird.height > pipe.y) { setGameOver(); return; } } for (let i = 0; i < pipes.length; i += 2) { const topPipe = pipes[i]; if (!topPipe.passed && topPipe.x + pipeProps.width < bird.x) { topPipe.passed = true; if(pipes[i+1]) pipes[i+1].passed = true; obstacleScore++; if (obstacleScore >= targetObstacles) { setWin(); return; } } } }
+         // Simplified drawBird - ALWAYS orange square
          function drawBird() { ctx.fillStyle = birdProps.color; ctx.fillRect(birdProps.x, birdProps.y, birdProps.width, birdProps.height); }
-         function drawPipes() { /* Same */ ctx.fillStyle = pipeProps.color; pipes.forEach(pipe => { ctx.fillRect(pipe.x, pipe.y, pipeProps.width, pipe.height); }); }
-         // drawCollectibles draws colored squares
-         function drawCollectibles() { collectibles.forEach(item => { if (!item.collected && !item.offscreen) { ctx.fillStyle = (item.type === 'EU' ? collectibleProps.colorEU : collectibleProps.colorNATO); ctx.fillRect(item.x, item.y, collectibleProps.size, collectibleProps.size); } }); }
-         function drawScore() { /* Same */ ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth= 0.5; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; const obsText = `Obstacles: ${obstacleScore}/${targetObstacles}`; const bonusText = `Bonus: ${collectibleScore}`; ctx.strokeText(obsText, 10, 10); ctx.fillText(obsText, 10, 10); ctx.strokeText(bonusText, 10, 35); ctx.fillText(bonusText, 10, 35); }
-         function checkWinConditions() { /* Same */ const endTime = Date.now(); const elapsedTimeSeconds = (endTime - startTime) / 1000; if (!startTime || elapsedTimeSeconds < minWinTimeSeconds) { console.warn(`Anti-Cheat: Time (${elapsedTimeSeconds.toFixed(1)}s) < Min (${minWinTimeSeconds}s).`); return false; } return true; }
+         function drawPipes() { ctx.fillStyle = pipeProps.color; pipes.forEach(pipe => { ctx.fillRect(pipe.x, pipe.y, pipeProps.width, pipe.height); }); }
+         // Simplified score drawing
+         function drawScore() { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth= 0.5; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; const obsText = `Obstacles: ${obstacleScore}/${targetObstacles}`; ctx.strokeText(obsText, 10, 10); ctx.fillText(obsText, 10, 10); }
+         function checkWinConditions() { const endTime = Date.now(); const elapsedTimeSeconds = (endTime - startTime) / 1000; if (!startTime || elapsedTimeSeconds < minWinTimeSeconds) { console.warn(`Anti-Cheat: Time (${elapsedTimeSeconds.toFixed(1)}s) < Min (${minWinTimeSeconds}s).`); return false; } return true; }
 
-         function showOverlay(title, text, showStart, showRestart, tierCode = '') { // Removed prizeTierText
+         function showOverlay(title, text, showStart, showRestart, randomCode = '') {
              if(!overlay || !overlayTitle || !overlayText || !startButton || !restartButton || !randomCodeContainer || !randomCodeSpan) { return; }
              overlayTitle.textContent = title;
              overlayText.textContent = text;
+             // Ensure button state is managed correctly based on 'showStart' and 'canPlay'
+             const canPlay = checkPlayLimit(); // Check limit again when showing overlay
              startButton.style.display = showStart ? 'inline-block' : 'none';
-             // Ensure Start button is enabled if it should be shown
-             if(showStart && startButton) startButton.disabled = false;
+             if (showStart && startButton) startButton.disabled = !canPlay; // Disable if limit reached
              restartButton.style.display = showRestart ? 'inline-block' : 'none';
-             if (prizeInfoSpan) prizeInfoSpan.style.display = 'none'; // Hide prize tier text span
-             if (tierCode) { randomCodeSpan.textContent = tierCode; randomCodeContainer.style.display = 'block'; }
+             if (prizeInfoSpan) prizeInfoSpan.style.display = 'none'; // Hide prize info span
+             if (randomCode) { randomCodeSpan.textContent = randomCode; randomCodeContainer.style.display = 'block'; }
              else { randomCodeContainer.style.display = 'none'; }
              overlay.classList.add('visible');
          }
          function hideOverlay() { if(overlay) overlay.classList.remove('visible'); }
-         function setGameOver() { if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over"); gameState = 'gameover'; playSound(loseSound); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;} incrementPlayCount(); showOverlay('Game Over!', `Obstacles: ${obstacleScore} | Bonus: ${collectibleScore}`, false, true); }
-         function generateTierCode(scoreTierLevel) { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let randomPart = ''; for (let i = 0; i < 4; i++) { randomPart += chars.charAt(Math.floor(Math.random() * chars.length)); } return `KYRJP-${scoreTierLevel}-${randomPart}`; }
+         // Simplified GameOver - No Bonus Score
+         function setGameOver() { if (gameState === 'gameover' || gameState === 'win') return; console.log("Game Over"); gameState = 'gameover'; playSound(loseSound); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;} incrementPlayCount(); showOverlay('Game Over!', `Obstacles Passed: ${obstacleScore}`, false, true); }
 
-        // Updated setWin - Uses Tiers for code generation, NO Formspree, NO tier text display
-        function setWin() {
+         // Simplified setWin - NO Tiers, NO Formspree, ONLY Random Code
+         function setWin() {
              if (gameState === 'win' || gameState === 'gameover') return;
              console.log("Win condition met!");
              if (checkWinConditions()) {
@@ -135,41 +146,48 @@
                  playSound(winSound);
                  if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null;}
                  incrementPlayCount();
-                 const totalScore = targetObstacles + collectibleScore;
-                 let prizeTierLevel = 0;
-                 if (totalScore >= 50) { prizeTierLevel = 50; } else if (totalScore >= 40) { prizeTierLevel = 40; } else if (totalScore >= 30) { prizeTierLevel = 30; } else { prizeTierLevel = 20; }
-                 const claimCode = generateTierCode(prizeTierLevel); // Generate code based on tier
-                 console.log(`Win! Score: ${totalScore}, Tier Level: ${prizeTierLevel}, Claim Code: ${claimCode}`);
-                 // Show overlay with score and the TIER-SPECIFIC code, NO tier text
-                 showOverlay('🎉 Congratulations! 🎉', `Final Score: ${totalScore} (Obstacles: ${obstacleScore} + Bonus: ${collectibleScore})`, false, true, claimCode );
-                 // Formspree REMOVED
+                 const randomCode = prizeCodeArray[Math.floor(Math.random() * prizeCodeArray.length)];
+                 console.log(`Win! Obstacles: ${obstacleScore}, Code: ${randomCode}`);
+                 showOverlay('🎉 Congratulations! 🎉', `You passed all ${targetObstacles} obstacles!`, false, true, randomCode);
+                 // Formspree call REMOVED
              } else {
                  console.log("Anti-cheat check failed.");
                  setGameOver();
-                 if(overlayText) overlayText.textContent = `Score: ${obstacleScore + collectibleScore}. Anti-cheat check failed.`;
+                 if(overlayText) overlayText.textContent = `Obstacles: ${obstacleScore}. Anti-cheat check failed.`;
              }
+         }
+
+        // Game Loop - FIXED to call updatePipes()
+        function loop(timestamp) {
+            if (gameState !== 'playing') { return; }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updatePipes(); // <-- *** BURASI DÜZELTİLDİ ***
+            updateBird();
+            checkCollisions();
+            drawPipes();
+            // drawCollectibles removed
+            drawBird();
+            drawScore();
+            frames++;
+            animationFrameId = requestAnimationFrame(loop);
         }
 
-        // Game Loop
-        function loop(timestamp) { if (gameState !== 'playing') { return; } ctx.clearRect(0, 0, canvas.width, canvas.height); updatePipes(); updateBird(); checkCollisions(); drawPipes(); drawCollectibles(); drawBird(); drawScore(); frames++; animationFrameId = requestAnimationFrame(loop); }
-
         // --- Init and Event Listeners ---
-        const spacebarHandler = (e) => { /* imagesLoaded check removed */ if (e.code === 'Space') { e.preventDefault(); if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } };
+        const spacebarHandler = (e) => { /* imagesLoaded removed */ if (e.code === 'Space') { e.preventDefault(); if (gameState === 'start' && checkPlayLimit()) { resetGame(); } else if (gameState === 'playing') { birdJump(); } } };
         function initScreenUpdate() {
-            if (!overlay || !startButton || !overlayText) return;
-            const canPlay = checkPlayLimit();
-            const plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10);
-            const playsRemaining = maxPlaysPerDay - plays;
-            let startText = `Plays remaining today: ${canPlay ? playsRemaining : 0}`; // No loading message needed
-            if (!canPlay) { startText = `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`; }
-            console.log("Updating overlay text (No Img Load):", startText);
-            // Show overlay, always show start button if canPlay (imagesLoaded is true now)
-            showOverlay('KyrosJump!', startText, canPlay, false);
-            if(startButton) { startButton.disabled = !canPlay; if (!canPlay) { startButton.style.display = 'none'; } else { startButton.style.display = 'inline-block'; } }
+             if (!overlay || !startButton || !overlayText) return;
+             const canPlay = checkPlayLimit();
+             const plays = parseInt(localStorage.getItem(playLimitKey) || '0', 10);
+             const playsRemaining = maxPlaysPerDay - plays;
+             let startText = `Plays remaining today: ${canPlay ? playsRemaining : 0}`; // No loading message
+             if (!canPlay) { startText = `Daily play limit (${maxPlaysPerDay}) reached. Try again tomorrow!`; }
+             console.log("Updating overlay text (No Img Load):", startText);
+             showOverlay('KyrosJump!', startText, canPlay, false); // Show start if canPlay
+             if(startButton) { startButton.disabled = !canPlay; if (!canPlay) { startButton.style.display = 'none'; } else { startButton.style.display = 'inline-block'; } }
         }
         function init() {
              console.log(">>> init() function entered (No Img Load).");
-             gameState = 'start'; // Set state to start
+             gameState = 'start';
              if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
              hideOverlay();
              initScreenUpdate(); // Update screen immediately
@@ -183,19 +201,20 @@
              canvas.removeEventListener('click', clickOrTapHandler); canvas.removeEventListener('touchstart', clickOrTapHandler);
              canvas.addEventListener('click', clickOrTapHandler); canvas.addEventListener('touchstart', clickOrTapHandler);
 
+             // Keep DEBUG alerts in start button for now
              startButton.onclick = () => {
-                 alert("--- Start Button Clicked! ---"); // Keep alert
+                 alert("--- Start Button Clicked! ---");
                  const currentState = gameState;
                  const currentCanPlay = checkPlayLimit();
-                 alert(`Checking: State='${currentState}', CanPlay=${currentCanPlay}`); // Keep alert
+                 alert(`Checking: State='${currentState}', CanPlay=${currentCanPlay}`);
                  if (currentState === 'start' && currentCanPlay) {
-                     alert("Conditions MET! Calling resetGame()..."); // Keep alert
+                     alert("Conditions MET! Calling resetGame()...");
                      resetGame();
                  } else {
                      let blockReason = "Start button ignored! Reason(s):\n";
                      if (currentState !== 'start') blockReason += `- Game state is not 'start' ('${currentState}')\n`;
                      if (!currentCanPlay) blockReason += `- Play limit reached\n`;
-                     console.error(blockReason); alert(blockReason); // Keep alert
+                     console.error(blockReason); alert(blockReason);
                  }
              };
              console.log("Start Button listener attached.");
@@ -210,7 +229,7 @@
 
         // --- Initial Start ---
         console.log("Running init() immediately (No Image Wait).");
-        gameState = 'start'; // Set initial state
+        gameState = 'start';
         init(); // Call init directly
 
     }); // END of DOMContentLoaded listener
